@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Georgia", "Times New Roman", serif;
+  --font-sans: "Inter", "Helvetica Neue", Arial, sans-serif;
+  
+  --color-brand-bg: #FFFFFF;
+  --color-brand-bg-accent: #3B1E54;
+  --color-brand-text: #CC2B5E;
+  --color-brand-muted: #4B0082;
+  --color-brand-border: #FFFFFF;
+  --color-brand-indigo: #4B0082;
+  --color-brand-sunset: #CC2B5E;
+  --color-brand-luxury: #3B1E54;
+}
+
+@layer base {
+  body {
+    @apply bg-brand-bg text-brand-text font-sans antialiased;
+  }
+}
+
+@layer components {
+  .editorial-title {
+    @apply font-serif text-5xl md:text-8xl leading-[0.95] tracking-[-0.04em] font-normal;
+  }
+  
+  .section-label {
+    @apply text-[10px] uppercase tracking-[0.2em] text-brand-muted font-bold;
+  }
+  
+  .cta-border {
+    @apply border border-brand-text px-8 py-4 uppercase tracking-[0.1em] text-xs font-bold transition-all duration-300;
+  }
+
+  /* Gradient Helper */
+  .bg-sunset-gradient {
+    background: linear-gradient(135deg, var(--color-brand-indigo) 0%, var(--color-brand-sunset) 100%);
+  }
+}
