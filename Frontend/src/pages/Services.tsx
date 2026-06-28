@@ -1,8 +1,18 @@
-import { motion } from 'motion/react';
-import { BookOpen, Briefcase, TrendingUp, Handshake } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { BookOpen, Briefcase, TrendingUp, Handshake, X } from 'lucide-react';
 
 export function Services() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Form State Configuration matching the Home page setup
+  const [formData, setFormData] = useState({
+    name: '',
+    surname: '',
+    email: ''
+  });
+
   const services = [
     {
       icon: <BookOpen size={32} />,
@@ -29,6 +39,32 @@ export function Services() {
       benefits: ["Global Directory", "Exclusive Events", "Collaborative Projects"]
     }
   ];
+
+  // PayFast registration initialization form logic mirrored from the Home page
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch('http://localhost:5000/api/initialize-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.redirectUrl) {
+        window.location.href = data.redirectUrl;
+      } else {
+        alert(data.error || "Could not link to payment gateway.");
+      }
+    } catch (error) {
+      alert("Network communication failure with the registration server.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="bg-brand-bg min-h-screen pt-32 pb-24 px-4 text-brand-text">
@@ -73,16 +109,75 @@ export function Services() {
                   </li>
                 ))}
               </ul>
-              <Link 
-                to="/signup" 
-                className="inline-block border border-brand-text px-10 py-5 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-brand-luxury transition-all text-brand-text"
+              {/* Changed from Link to button layout triggering your membership activation flow modal */}
+              <button 
+                onClick={() => setIsModalOpen(true)}
+                className="inline-block border border-brand-text px-10 py-5 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-brand-luxury transition-all text-brand-text bg-transparent cursor-pointer"
               >
                 Enroll Today
-              </Link>
+              </button>
             </motion.div>
           ))}
         </div>
       </div>
+
+      {/* Synchronized Membership Form Overlay Modal */}
+      <AnimatePresence>
+        {isModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-luxury/80 backdrop-blur-sm p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-brand-bg w-full max-w-xl max-h-[90vh] overflow-y-auto border border-brand-border shadow-2xl p-8 relative text-brand-luxury"
+            >
+              <button onClick={() => setIsModalOpen(false)} className="absolute top-6 right-6 text-brand-muted hover:text-brand-text transition-colors cursor-pointer">
+                <X size={20} />
+              </button>
+
+              <div className="mb-8">
+                <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-brand-text block mb-2">Tier 01 // Premium Membership</span>
+                <h3 className="font-serif text-3xl text-brand-indigo">Join the Collective</h3>
+                <div className="mt-4 p-4 bg-brand-bg-accent/10 border-l-4 border-brand-text">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-sm font-semibold tracking-wide text-brand-text">Monthly Debit Order:</span>
+                    <span className="font-serif text-xl font-bold text-brand-text">R 100.00 / mo</span>
+                  </div>
+                  <p className="text-[11px] text-brand-muted leading-relaxed mt-1">
+                    By completing this form, you authorize Alpha Women Elevates to process a recurring monthly debit transaction of R100.00 until cancelled.
+                  </p>
+                </div>
+              </div>
+
+              <form onSubmit={handleFormSubmit} className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-wider font-bold mb-2">First Name</label>
+                    <input type="text" required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full border border-brand-border p-3 text-sm focus:outline-brand-indigo bg-white text-black" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-wider font-bold mb-2">Surname</label>
+                    <input type="text" required value={formData.surname} onChange={(e) => setFormData({...formData, surname: e.target.value})} className="w-full border border-brand-border p-3 text-sm focus:outline-brand-indigo bg-white text-black" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase tracking-wider font-bold mb-2">Email Address</label>
+                  <input type="email" required value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full border border-brand-border p-3 text-sm focus:outline-brand-indigo bg-white text-black" />
+                </div>
+
+                <div className="bg-brand-bg-accent/5 p-4 border border-brand-border rounded text-[11px] text-brand-muted leading-relaxed">
+                  🔒 <strong>Secure External Checkout:</strong> To fully safeguard your payment security, clicking below redirects you directly to PayFast's official, POPIA-compliant transaction processor to verify your subscription setup.
+                </div>
+
+                <button type="submit" disabled={isSubmitting} className="w-full bg-brand-luxury text-white hover:bg-brand-indigo p-4 text-[10px] font-bold uppercase tracking-[0.2em] transition-colors disabled:opacity-50 cursor-pointer">
+                  {isSubmitting ? 'Connecting to Secure Checkout...' : 'Accept & Proceed to Payment'}
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

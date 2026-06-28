@@ -1,37 +1,42 @@
 import { motion } from 'motion/react';
-import { ShoppingCart, Eye } from 'lucide-react';
+import { ShoppingCart } from 'lucide-react';
 import { useState } from 'react';
+import { useCart } from '../context/CartContext';
+import { useNavigate } from 'react-router-dom';
 
 export function Shop() {
   const [activeCategory, setActiveCategory] = useState('All');
+ const { addToCart } = useCart() as any;
+  const navigate = useNavigate();
 
+  // Price converted to pure numbers for accurate math inside your Cart component
   const products = [
     {
       id: 1,
       name: "Ambassador T-Shirt",
       category: "Apparel",
-      price: "R299",
+      price: 299,
       image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=600&h=800"
     },
     {
       id: 2,
       name: "Empowerment Journal",
       category: "Stationary",
-      price: "R150",
+      price: 150,
       image: "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=600&h=800"
     },
     {
       id: 3,
       name: "Alpha Women Cap",
       category: "Accessories",
-      price: "R180",
+      price: 180,
       image: "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?auto=format&fit=crop&q=80&w=600&h=800"
     },
     {
       id: 4,
       name: "Visionary Tote Bag",
       category: "Accessories",
-      price: "R120",
+      price: 120,
       image: "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&q=80&w=600&h=800"
     }
   ];
@@ -41,6 +46,11 @@ export function Shop() {
   const filteredProducts = activeCategory === 'All' 
     ? products 
     : products.filter(p => p.category === activeCategory);
+
+  const handleAddToBag = (product: any) => {
+    addToCart(product);
+    navigate('/cart');
+  };
 
   return (
     <div className="bg-brand-bg min-h-screen pt-32 pb-24 px-4 overflow-hidden text-brand-text">
@@ -61,8 +71,8 @@ export function Shop() {
             {categories.map((cat) => (
               <button
                 key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`text-[10px] font-bold uppercase tracking-[0.2em] transition-all relative ${
+                onClick={() => setActiveCategory(cat)} /* FIX 1: Set category instead of adding item to bag */
+                className={`text-[10px] font-bold uppercase tracking-[0.2em] transition-all relative cursor-pointer ${
                   activeCategory === cat 
                     ? 'text-brand-text after:content-[""] after:absolute after:-bottom-2 after:left-0 after:w-full after:h-[1px] after:bg-brand-sunset' 
                     : 'text-brand-muted hover:text-brand-text'
@@ -91,7 +101,11 @@ export function Shop() {
                   referrerPolicy="no-referrer"
                 />
                 <div className="absolute inset-x-0 bottom-0 p-6 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                  <button className="w-full bg-brand-luxury text-brand-text py-4 text-[10px] font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-3 border border-brand-sunset/30 hover:bg-brand-indigo transition-colors shadow-[0_0_15px_rgba(204,43,94,0.3)]">
+                  {/* FIX 3: Bound onClick to trigger the handleAddToBag route logic */}
+                  <button 
+                    onClick={() => handleAddToBag(product)}
+                    className="w-full bg-brand-luxury text-brand-text py-4 text-[10px] font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-3 border border-brand-sunset/30 hover:bg-brand-indigo transition-colors shadow-[0_0_15px_rgba(204,43,94,0.3)] cursor-pointer"
+                  >
                     <ShoppingCart size={14} />
                     Add to Bag
                   </button>
@@ -100,7 +114,8 @@ export function Shop() {
               <div>
                 <span className="section-label mb-2 block text-brand-indigo">{product.category}</span>
                 <h3 className="text-xl font-serif mb-2 text-brand-text">{product.name}</h3>
-                <p className="font-serif italic text-brand-text/60">{product.price}</p>
+                {/* FIX 2: Render out R cleanly next to the numerical item value */}
+                <p className="font-serif italic text-brand-text/60">R{product.price}</p>
               </div>
             </motion.div>
           ))}

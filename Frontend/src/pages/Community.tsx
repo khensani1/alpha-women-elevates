@@ -34,12 +34,7 @@ export function Community() {
       story: "Visionary leader dedicated to creating structured support systems that empower women to transcend local boundaries and achieve global impact.",
       image: "https://images.unsplash.com/photo-1531123897727-8f129e16fd3c?auto=format&fit=crop&q=80&w=200&h=200"
     },
-    {
-      name: "Elena G.",
-      role: "Creative Director",
-      story: "Found her co-founder through our exclusive networking events. Now scaling globally.",
-      image: "https://images.unsplash.com/photo-1580489944761-15a09d384958?auto=format&fit=crop&q=80&w=200&h=200"
-    }
+    
   ];
 
   return (
@@ -58,7 +53,7 @@ export function Community() {
           </div>
           <p className="text-lg text-brand-text opacity-70 font-serif italic max-w-sm">
             Celebrate achievements, connect with businesses, and stay updated with 
-            upcoming global engagements.
+            upcoming engagements.
           </p>
         </header>
 

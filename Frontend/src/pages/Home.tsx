@@ -65,7 +65,7 @@ export function Home() {
               Women<br /><span className="italic opacity-60">Elevates.</span>
             </h1>
             <p className="text-xl text-brand-text opacity-70 mb-12 leading-relaxed font-serif italic max-w-lg">
-              Empowering a global community of forward-thinking women through mentorship, curated events, and collective commerce.
+              Empowering a community of forward-thinking women through mentorship, curated events, and collective commerce.
             </p>
             
             <div className="flex flex-col gap-4">

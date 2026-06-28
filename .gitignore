@@ -1,0 +1,60 @@
+# ==========================================
+# 📦 1. FRONTEND DEPENDENCIES & BUILDS
+# ==========================================
+# Node modules for the frontend
+**/frontend/node_modules/
+**/Frontend/node_modules/
+
+# Production build outputs
+**/frontend/dist/
+**/Frontend/dist/
+**/frontend/build/
+**/Frontend/build/
+
+# Vite local development files
+**/frontend/.vite/
+**/Frontend/.vite/
+
+
+# ==========================================
+# ⚡ 2. BACKEND DEPENDENCIES & UPLOADS
+# ==========================================
+# Node modules for the backend
+**/backend/node_modules/
+**/Backend/node_modules/
+
+# Log files
+**/backend/*.log
+**/Backend/*.log
+
+# ⚠️ IMPORTANT: Ignore local admin image uploads so they don't bloat your Git history
+**/backend/public/uploads/
+**/Backend/public/uploads/
+
+
+# ==========================================
+# 🔒 3. SECURITY KEYS & ENVIRONMENT CONFIGS
+# ==========================================
+# Block all secret files containing database passwords, PayFast keys, and JWT secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+**/.env
+**/.env.*
+
+
+# ==========================================
+# 💻 4. SYSTEM & IDE JUNK
+# ==========================================
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# VS Code or WebStorm workspace folders
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj

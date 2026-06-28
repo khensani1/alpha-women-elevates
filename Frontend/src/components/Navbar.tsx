@@ -1,16 +1,22 @@
 import { Link } from 'react-router-dom';
-import { Menu, X, ShoppingBag, User } from 'lucide-react';
+import { Menu, X, ShoppingCart } from 'lucide-react'; 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useCart } from '../context/CartContext'; // Import the cart hook
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const { cartItems } = useCart() as any; // Destructure cart items to calculate the live count
+
+  // Calculate total item quantity in the cart
+  const totalItems = cartItems.reduce((total: number, item: any) => total + item.quantity, 0);
 
   const navLinks = [
     { name: 'About', href: '/about' },
     { name: 'Services', href: '/services' },
     { name: 'Community', href: '/community' },
     { name: 'Shop', href: '/shop' },
+    { name: 'Gallery', href: '/gallery' },
   ];
 
   return (
@@ -34,32 +40,39 @@ export function Navbar() {
                 {link.name}
               </Link>
             ))}
-            <div className="flex items-center space-x-6 border-l border-brand-border pl-12">
-              <Link to="/shop" className="text-brand-text hover:text-brand-indigo transition-colors">
-                <ShoppingBag size={18} />
-              </Link>
-              <Link to="/login" className="text-brand-text hover:text-brand-indigo transition-colors">
-                <User size={18} />
-              </Link>
-              <Link
-                to="/signup"
-                className="bg-brand-luxury text-brand-text px-6 py-3 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-brand-indigo transition-colors"
-              >
-                Join Us
-              </Link>
-            </div>
+
+            {/* Desktop Cart Icon Component with Live Badge */}
+            <Link to="/cart" className="relative p-2 text-brand-text hover:text-brand-indigo transition-colors flex items-center">
+              <ShoppingCart size={18} />
+              {totalItems > 0 && (
+                <span className="absolute -top-1 -right-1 bg-brand-luxury text-brand-text text-[8px] font-bold w-4 h-4 rounded-full flex items-center justify-center animate-pulse">
+                  {totalItems}
+                </span>
+              )}
+            </Link>
           </div>
 
-          {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center">
-            <button onClick={() => setIsOpen(!isOpen)} className="p-2 text-brand-text">
+          {/* Mobile Right Actions Alignment */}
+          <div className="md:hidden flex items-center space-x-4">
+            {/* Mobile Cart Button Option */}
+            <Link to="/cart" className="relative p-2 text-brand-text flex items-center">
+              <ShoppingCart size={20} />
+              {totalItems > 0 && (
+                <span className="absolute top-0 right-0 bg-brand-luxury text-brand-text text-[8px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                  {totalItems}
+                </span>
+              )}
+            </Link>
+
+            {/* Mobile Menu Toggle Button */}
+            <button onClick={() => setIsOpen(!isOpen)} className="p-2 text-brand-text cursor-pointer">
               {isOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu Dropdown */}
       <AnimatePresence>
         {isOpen && (
           <motion.div

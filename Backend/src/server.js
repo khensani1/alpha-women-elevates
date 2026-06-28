@@ -2,15 +2,20 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import pool from './db.js'; // Imports our database controller
+import paymentRoutes from './routes/paymentRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+  
 
 app.use(cors());
 app.use(express.json());
-
+app.use(express.static('public'));
+app.use('/api/payments', paymentRoutes);
+app.use('/api/admin', adminRoutes);
 // Base Test Route
 app.get('/', (req, res) => {
   res.json({ message: "API Running smoothly 🚀" });
