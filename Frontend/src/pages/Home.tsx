@@ -17,7 +17,7 @@ export function Home() {
   const handleJoinCommunity = async () => {
     try {
       setIsRedirecting(true);
-      const response = await fetch('http://localhost:5000/api/community-link');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/community-link`);
       const data = await response.json();
       if (data.url) window.open(data.url, '_blank', 'noopener,noreferrer');
     } catch (error) {
@@ -33,7 +33,7 @@ export function Home() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('http://localhost:5000/api/initialize-subscription', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/initialize-subscription`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)

@@ -20,7 +20,7 @@ export function Cart() {
 
     try {
       // 1. Post order details to your Node.js/Express backend
-      const response = await fetch('http://localhost:5000/api/payments/payfast-checkout', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/payments/payfast-checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
