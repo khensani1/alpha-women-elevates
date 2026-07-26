@@ -23,6 +23,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { AdminLogin } from './pages/admin/AdminLogin';
 import { AdminGallery } from './pages/admin/AdminGallery';
 import { AdminCommunity } from './pages/admin/AdminCommunity';
+import { AdminDashboard } from './pages/admin/AdminDashboard';
 // 👈 Import your Admin Sidebar component here
 // import { AdminSidebar } from './components/admin/AdminSidebar'; 
 
@@ -85,6 +86,7 @@ export default function App() {
           {/* 🔒 PROTECTED CORE DASHBOARDS (No public elements, include Sidebar instead) */}
           <Route element={<ProtectedRoute />}>
             <Route element={<AdminLayout />}>
+              <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/gallery" element={<AdminGallery />} />
               <Route path="/admin/community" element={<AdminCommunity />} />
             </Route>

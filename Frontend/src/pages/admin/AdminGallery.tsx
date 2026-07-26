@@ -1,6 +1,13 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { AdminLayout } from '../../components/admin/AdminLayout';
-import { Plus, Trash2, Upload } from 'lucide-react';
+import { Plus, Trash2, Upload, Loader2 } from 'lucide-react';
+
+interface DBGalleryItem {
+  id: number;
+  title: string;
+  location: string;
+  event_date: string;
+}
 
 export function AdminGallery() {
   const [title, setTitle] = useState('');
@@ -9,11 +16,28 @@ export function AdminGallery() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Simulated live directory array
-  const [mockItems, setMockItems] = useState([
-    { id: 1, title: 'Annual Leadership Summit', date: '2025-10-14', location: 'Cape Town' },
-    { id: 2, title: 'Women in Tech Networking Mixer', date: '2025-08-22', location: 'Johannesburg' },
-  ]);
+  // Live records state array
+  const [dbItems, setDbItems] = useState<DBGalleryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch real archives on load
+  const fetchAdminGallery = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/gallery`);
+      if (response.ok) {
+        const data = await response.json();
+        setDbItems(data);
+      }
+    } catch (err) {
+      console.error("Failed to sync records:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAdminGallery();
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -27,12 +51,11 @@ export function AdminGallery() {
       return alert('Please completely fill in all text details and attach an event photograph.');
     }
 
-    // 📦 Append payload details into an encrypted Multipart FormData stream object
     const formData = new FormData();
     formData.append('title', title);
     formData.append('location', location);
     formData.append('date', date);
-    formData.append('image', selectedFile); // Pushes the raw local computer file asset binary
+    formData.append('image', selectedFile);
 
     try {
       const token = localStorage.getItem('awe_token');
@@ -40,8 +63,6 @@ export function AdminGallery() {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
-          // Note: Never include 'Content-Type': 'application/json' here when passing FormData! 
-          // The browser automatically sets the correct multi-part boundary flags for you.
         },
         body: formData
       });
@@ -54,16 +75,41 @@ export function AdminGallery() {
 
       alert('🎉 File uploaded and memory written live to the website database successfully!');
       
-      // Sync UI state, then wipe input forms clean
-      setMockItems([{ id: Date.now(), title, date, location }, ...mockItems]);
+      // Clear inputs and pull fresh list from DB
       setTitle('');
       setLocation('');
       setDate('');
       setSelectedFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
+      
+      fetchAdminGallery();
 
     } catch (err: any) {
       alert(`Upload operation failed: ${err.message}`);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('Are you completely sure you want to permanently delete this dynamic archive entry?')) return;
+
+    try {
+      const token = localStorage.getItem('awe_token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/gallery/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Failed to remove archive item.');
+      }
+
+      // Filter state directly
+      setDbItems(dbItems.filter(item => item.id !== id));
+    } catch (err: any) {
+      alert(`Delete verification failure: ${err.message}`);
     }
   };
 
@@ -93,7 +139,7 @@ export function AdminGallery() {
                 <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full bg-neutral-900 border border-neutral-800 p-2 text-xs rounded focus:outline-none focus:border-brand-indigo text-white" />
               </div>
               
-              {/* 🖥️ BRAND NEW FILE PICKER LAYOUT ENGINE */}
+              {/* FILE PICKER */}
               <div>
                 <label className="block text-[10px] uppercase font-bold tracking-wider mb-1 text-neutral-400">Attach Device Image</label>
                 <div 
@@ -116,20 +162,34 @@ export function AdminGallery() {
 
           {/* ACTIVE LIVE DIRECTORY LISTING PANEL */}
           <div className="md:col-span-2 bg-neutral-950 p-6 border border-neutral-800 rounded">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-4">Active Directory Records ({mockItems.length})</h2>
-            <div className="divide-y divide-neutral-800">
-              {mockItems.map((item) => (
-                <div key={item.id} className="py-4 flex justify-between items-center first:pt-0 last:pb-0">
-                  <div>
-                    <h4 className="text-sm font-semibold text-white">{item.title}</h4>
-                    <p className="text-xs text-neutral-500 mt-1">{item.location} • {item.date}</p>
+            <h2 className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-4">Active Directory Records ({dbItems.length})</h2>
+            
+            {loading ? (
+              <div className="flex justify-center py-8"><Loader2 className="animate-spin text-neutral-500" size={24} /></div>
+            ) : (
+              <div className="divide-y divide-neutral-800">
+                {dbItems.map((item) => (
+                  <div key={item.id} className="py-4 flex justify-between items-center first:pt-0 last:pb-0">
+                    <div>
+                      <h4 className="text-sm font-semibold text-white">{item.title}</h4>
+                      <p className="text-xs text-neutral-500 mt-1">
+                        {item.location} • {new Date(item.event_date).toLocaleDateString('en-ZA')}
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => handleDelete(item.id)}
+                      type="button" 
+                      className="text-neutral-500 hover:text-red-400 p-2 transition-colors cursor-pointer"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
-                  <button type="button" className="text-neutral-500 hover:text-red-400 p-2 transition-colors cursor-pointer">
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
-            </div>
+                ))}
+                {dbItems.length === 0 && (
+                  <p className="text-xs text-neutral-500 text-center py-8">No dynamic entries found inside PostgreSQL records.</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

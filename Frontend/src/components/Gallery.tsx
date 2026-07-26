@@ -1,56 +1,73 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Calendar, MapPin } from 'lucide-react';
+import { Calendar, MapPin, Loader2 } from 'lucide-react';
+
+interface GalleryItem {
+  id: number;
+  title: string;
+  location: string;
+  image_url: string;
+  event_date: string;
+  day: string;
+  month: string;
+  year: string;
+}
 
 export function Gallery() {
-  // 1. Organize your event data with explicit year, month, and description structures
-  const galleryEvents = [
-    {
-      id: 1,
-      title: "Annual Leadership Summit",
-      location: "Cape Town",
-      day: "14",
-      month: "October",
-      year: "2025",
-      image: "https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&q=80&w=800"
-    },
-    {
-      id: 2,
-      title: "Women in Tech Networking Mixer",
-      location: "Johannesburg",
-      day: "22",
-      month: "August",
-      year: "2025",
-      image: "https://images.unsplash.com/photo-1515187029135-18ee286d815b?auto=format&fit=crop&q=80&w=800"
-    },
-    {
-      id: 3,
-      title: "Entrepreneurship Masterclass",
-      location: "Pretoria",
-      day: "05",
-      month: "August",
-      year: "2025",
-      image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&q=80&w=800"
-    },
-    {
-      id: 4,
-      title: "Financial Literacy Strategy Gala",
-      location: "Durban",
-      day: "11",
-      month: "March",
-      year: "2024",
-      image: "https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?auto=format&fit=crop&q=80&w=800"
-    }
-  ];
-
-  // Extract unique years for the filter bar pipeline
-  const uniqueYears = ['All', ...new Set(galleryEvents.map(event => event.year))];
+  const [items, setItems] = useState<GalleryItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState('All');
 
-  // Filter logic matching your design specifications
+  useEffect(() => {
+    const fetchGallery = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/gallery`);
+        if (!response.ok) throw new Error('Failed to fetch gallery records.');
+        const data = await response.json();
+
+        // Map incoming DB formats to standard presentation objects
+        const formattedData = data.map((item: any) => {
+          const dateObj = new Date(item.event_date);
+          const months = [
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+          ];
+          return {
+            id: item.id,
+            title: item.title,
+            location: item.location,
+            image_url: item.image_url,
+            event_date: item.event_date,
+            day: String(dateObj.getDate()).padStart(2, '0'),
+            month: months[dateObj.getMonth()],
+            year: String(dateObj.getFullYear())
+          };
+        });
+
+        setItems(formattedData);
+      } catch (err) {
+        console.error("Gallery sync breakdown:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchGallery();
+  } [], []);
+
+  const uniqueYears = ['All', ...new Set(items.map(event => event.year))];
+
   const filteredEvents = selectedYear === 'All'
-    ? galleryEvents
-    : galleryEvents.filter(event => event.year === selectedYear);
+    ? items
+    : items.filter(event => event.year === selectedYear);
+
+  if (loading) {
+    return (
+      <div className="bg-brand-bg min-h-screen flex items-center justify-center text-brand-text">
+        <Loader2 className="animate-spin text-brand-indigo" size={32} />
+      </div>
+    );
+  }
 
   return (
     <div className="bg-brand-bg min-h-screen pt-32 pb-24 px-4 text-brand-text">
@@ -101,7 +118,7 @@ export function Gallery() {
               {/* Image Frame Container */}
               <div className="relative aspect-video w-full overflow-hidden mb-6 bg-brand-luxury/20">
                 <img 
-                  src={event.image} 
+                  src={event.image_url.startsWith('http') ? event.image_url : `${import.meta.env.VITE_API_URL}${event.image_url}`} 
                   alt={event.title}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 grayscale brightness-75 group-hover:grayscale-0 group-hover:brightness-90"
                   referrerPolicy="no-referrer"
