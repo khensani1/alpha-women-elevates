@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
-import { MapPin, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MapPin, ArrowRight, CheckCircle2, X, CreditCard, Sparkles, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-// Structure interfaces matching your PostgreSQL backend schema
 interface EventItem {
   id: number;
   title: string;
-  date: string; // or event_date depending on backend naming
+  date: string;
   location: string;
+  price?: number; // 0 or undefined for free events
 }
 
 interface NewsletterItem {
@@ -24,25 +24,24 @@ export function Community() {
   const [newsletters, setNewsletters] = useState<NewsletterItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 📡 Fetch live backend records on mount
+  // Registration Modal State
+  const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
+  const [formData, setFormData] = useState({ name: '', surname: '', email: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Post-Booking Upsell State
+  const [showSubscribeUpsell, setShowSubscribeUpsell] = useState(false);
+
   useEffect(() => {
     const fetchCommunityData = async () => {
       try {
-        // 1. Grab events (Make sure you have an event fetching route or use the newsletter/products structure)
         const eventsResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/events`);
-        if (eventsResponse.ok) {
-          const eventsData = await eventsResponse.json();
-          setEvents(eventsData);
-        }
+        if (eventsResponse.ok) setEvents(await eventsResponse.json());
 
-        // 2. Grab published newsletters
         const newsletterResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/newsletters`);
-        if (newsletterResponse.ok) {
-          const newsletterData = await newsletterResponse.json();
-          setNewsletters(newsletterData);
-        }
+        if (newsletterResponse.ok) setNewsletters(await newsletterResponse.json());
       } catch (err) {
-        console.error("Failed to sync public community feeds:", err);
+        console.error("Failed to sync community feeds:", err);
       } finally {
         setLoading(false);
       }
@@ -51,9 +50,60 @@ export function Community() {
     fetchCommunityData();
   }, []);
 
-  const handleRegister = (eventId: number) => {
-    if (!registeredEvents.includes(eventId)) {
-      setRegisteredEvents([...registeredEvents, eventId]);
+  const openRegistrationModal = (event: EventItem) => {
+    setSelectedEvent(event);
+    setFormData({ name: '', surname: '', email: '' });
+  };
+
+  const handleBookingSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedEvent || !formData.name || !formData.surname || !formData.email) {
+      return alert('Please fill in your name, surname, and email.');
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Send payload to backend booking endpoint
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/events/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId: selectedEvent.id,
+          eventTitle: selectedEvent.title,
+          eventPrice: selectedEvent.price || 0,
+          name: formData.name,
+          surname: formData.surname,
+          email: formData.email,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to process event booking.');
+
+      // If event requires payment and backend generated a PayFast payment link/form
+      if (selectedEvent.price && selectedEvent.price > 0 && result.paymentUrl) {
+        window.location.href = result.paymentUrl;
+        return;
+      }
+
+      // If free event or direct payment completion:
+      setRegisteredEvents([...registeredEvents, selectedEvent.id]);
+      const isMember = result.isRegisteredMember;
+
+      setSelectedEvent(null);
+
+      // Trigger post-booking upsell popup if the user is NOT a registered member
+      if (!isMember) {
+        setShowSubscribeUpsell(true);
+      } else {
+        alert('🎉 Booking successful! Your event ticket has been emailed to you.');
+      }
+
+    } catch (err: any) {
+      alert(`Registration Error: ${err.message}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -153,27 +203,38 @@ export function Community() {
                   initial={{ opacity: 0 }}
                   whileInView={{ opacity: 1 }}
                   viewport={{ once: true }}
-                  className="p-12 border-r border-b border-brand-border hover:bg-brand-bg-accent/10 transition-colors"
+                  className="p-12 border-r border-b border-brand-border hover:bg-brand-bg-accent/10 transition-colors flex flex-col justify-between"
                 >
-                  <div className="text-3xl font-serif mb-6 text-brand-text tracking-tighter">
-                    {/* Safely handles formatting dates like 12 Jul or 2026-07-12 */}
-                    {event.date.includes('-') ? new Date(event.date).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' }) : event.date}
+                  <div>
+                    <div className="text-3xl font-serif mb-6 text-brand-text tracking-tighter">
+                      {event.date.includes('-') ? new Date(event.date).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' }) : event.date}
+                    </div>
+                    <h3 className="text-xl font-serif mb-2 text-brand-text">{event.title}</h3>
+                    <div className="flex items-center gap-4 text-[10px] uppercase tracking-[0.1em] text-brand-muted font-bold mb-4">
+                      <MapPin size={12} className="text-brand-indigo" />
+                      {event.location}
+                    </div>
+                    {event.price && event.price > 0 ? (
+                      <span className="text-xs font-bold text-brand-luxury bg-brand-luxury/10 px-2 py-1 rounded inline-block">
+                        R{event.price} Entry
+                      </span>
+                    ) : (
+                      <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded inline-block">
+                        Free Access
+                      </span>
+                    )}
                   </div>
-                  <h3 className="text-xl font-serif mb-4 text-brand-text">{event.title}</h3>
-                  <div className="flex items-center gap-4 text-[10px] uppercase tracking-[0.1em] text-brand-muted font-bold">
-                    <MapPin size={12} className="text-brand-indigo" />
-                    {event.location}
-                  </div>
+
                   <div className="mt-10 pt-6 border-t border-brand-border">
                     <button 
-                      onClick={() => handleRegister(event.id)}
+                      onClick={() => openRegistrationModal(event)}
                       className={`text-[10px] font-bold uppercase tracking-[0.2em] flex items-center gap-2 group transition-colors ${
-                        registeredEvents.includes(event.id) ? 'text-green-500' : 'text-brand-text hover:text-brand-sunset'
+                        registeredEvents.includes(event.id) ? 'text-green-600' : 'text-brand-text hover:text-brand-sunset'
                       }`}
                     >
                       {registeredEvents.includes(event.id) ? (
                         <>
-                          Successfully Registered
+                          Booked / Pass Issued
                           <CheckCircle2 size={14} />
                         </>
                       ) : (
@@ -189,6 +250,141 @@ export function Community() {
             )}
           </div>
         </section>
+
+        {/* MODAL 1: REGISTRATION & TICKET FORM */}
+        <AnimatePresence>
+          {selectedEvent && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="w-full max-w-md p-8 border border-neutral-300 rounded shadow-2xl relative"
+                style={{ backgroundColor: '#C4BCC7' }}
+              >
+                <button 
+                  onClick={() => setSelectedEvent(null)}
+                  className="absolute top-4 right-4 text-neutral-600 hover:text-neutral-900"
+                >
+                  <X size={20} />
+                </button>
+
+                <h2 className="font-serif text-2xl font-bold text-neutral-900 mb-1">Reserve Your Spot</h2>
+                <p className="text-xs text-neutral-700 mb-6 font-medium">Event: <span className="font-bold">{selectedEvent.title}</span></p>
+
+                <form onSubmit={handleBookingSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-[10px] uppercase font-bold tracking-wider mb-1 text-neutral-700">First Name</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className="w-full border border-neutral-400 p-2.5 text-xs rounded text-neutral-900 focus:outline-none focus:border-brand-indigo"
+                      style={{ backgroundColor: '#C4BCC7' }}
+                      placeholder="e.g. Lerato"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase font-bold tracking-wider mb-1 text-neutral-700">Surname</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={formData.surname}
+                      onChange={(e) => setFormData({ ...formData, surname: e.target.value })}
+                      className="w-full border border-neutral-400 p-2.5 text-xs rounded text-neutral-900 focus:outline-none focus:border-brand-indigo"
+                      style={{ backgroundColor: '#C4BCC7' }}
+                      placeholder="e.g. Mokoena"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase font-bold tracking-wider mb-1 text-neutral-700">Email Address</label>
+                    <input 
+                      type="email" 
+                      required
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="w-full border border-neutral-400 p-2.5 text-xs rounded text-neutral-900 focus:outline-none focus:border-brand-indigo"
+                      style={{ backgroundColor: '#C4BCC7' }}
+                      placeholder="e.g. lerato@example.com"
+                    />
+                  </div>
+
+                  <div className="pt-4 border-t border-neutral-400 flex items-center justify-between">
+                    <span className="text-xs font-bold text-neutral-800">Total payable:</span>
+                    <span className="text-base font-serif font-bold text-brand-luxury">
+                      {selectedEvent.price && selectedEvent.price > 0 ? `R${selectedEvent.price}` : 'FREE'}
+                    </span>
+                  </div>
+
+                  <button 
+                    type="submit" 
+                    disabled={isSubmitting}
+                    className="w-full bg-brand-luxury text-white py-3.5 text-[10px] font-bold uppercase tracking-widest hover:bg-brand-indigo transition-colors rounded cursor-pointer flex items-center justify-center gap-2 mt-4"
+                  >
+                    {isSubmitting ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : selectedEvent.price && selectedEvent.price > 0 ? (
+                      <>
+                        Proceed to Checkout <CreditCard size={14} />
+                      </>
+                    ) : (
+                      'Confirm & Get Free Pass'
+                    )}
+                  </button>
+                </form>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* MODAL 2: NON-MEMBER SUBSCRIPTION UPSELL */}
+        <AnimatePresence>
+          {showSubscribeUpsell && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                className="w-full max-w-md p-8 border border-neutral-300 rounded shadow-2xl relative text-center"
+                style={{ backgroundColor: '#C4BCC7' }}
+              >
+                <button 
+                  onClick={() => setShowSubscribeUpsell(false)}
+                  className="absolute top-4 right-4 text-neutral-600 hover:text-neutral-900"
+                >
+                  <X size={20} />
+                </button>
+
+                <div className="w-12 h-12 bg-brand-indigo/20 text-brand-indigo rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Sparkles size={24} />
+                </div>
+
+                <h3 className="font-serif text-2xl font-bold text-neutral-900 mb-2">Ticket Issued Successfully! 🎉</h3>
+                <p className="text-xs text-neutral-800 leading-relaxed mb-6">
+                  We sent your event entry pass to your email. We noticed you aren't an official subscriber yet! Join our network to unlock full community access, event discounts, and newsletter digests.
+                </p>
+
+                <div className="space-y-3">
+                  <Link 
+                    to="/signup" 
+                    onClick={() => setShowSubscribeUpsell(false)}
+                    className="block w-full bg-brand-luxury text-white py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-brand-indigo transition-colors rounded"
+                  >
+                    Become an Official Member
+                  </Link>
+                  <button 
+                    onClick={() => setShowSubscribeUpsell(false)}
+                    className="block w-full text-[10px] font-bold uppercase tracking-wider text-neutral-700 hover:underline py-2"
+                  >
+                    Maybe Later
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
       </div>
     </div>
   );

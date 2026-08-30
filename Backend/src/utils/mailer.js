@@ -4,6 +4,24 @@ import { Resend } from 'resend';
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 /**
+ * Generic sendEmail function required by event routes & delivery notifications
+ */
+export const sendEmail = async ({ to, subject, html }) => {
+  try {
+    const data = await resend.emails.send({
+      from: 'AWE System <onboarding@resend.dev>',
+      to,
+      subject,
+      html,
+    });
+    return data;
+  } catch (error) {
+    console.error("Failed to send email via Resend:", error);
+    throw error;
+  }
+};
+
+/**
  * Sends a structured order notification email to Tersh (the owner)
  */
 export const sendOrderNotificationToAdmin = async (orderData, items) => {
@@ -19,8 +37,8 @@ export const sendOrderNotificationToAdmin = async (orderData, items) => {
 
   try {
     const data = await resend.emails.send({
-      from: 'AWE System <onboarding@resend.dev>', // Resend gives you this default testing domain for free!
-      to: 'tersh_email_here@example.com', // 👈 Put Tersh's real email address here
+      from: 'AWE System <onboarding@resend.dev>',
+      to: 'tersh@alphawomenelevates.com',
       subject: `🚨 New Order Received! - Total: R${orderData.total_amount}`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee;">

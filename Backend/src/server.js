@@ -5,23 +5,22 @@ import pool from './db.js'; // Imports our database controller
 import paymentRoutes from './routes/paymentRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import trackingRoutes from './routes/tracking.js'; 
-import galleryRoutes from './routes/adminRoutes.js';
-
-
+import eventsRouter from './routes/events.js'; // ✅ Fixed to ES Module import
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-  
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
+
 app.use('/api/payments', paymentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/tracking', trackingRoutes);
-app.use('/api/gallery', galleryRoutes);
+app.use('/api/gallery', adminRoutes); // Using adminRoutes for gallery endpoints
+app.use('/api/events', eventsRouter);
 
 // Base Test Route
 app.get('/', (req, res) => {

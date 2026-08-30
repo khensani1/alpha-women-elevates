@@ -29,11 +29,13 @@ export function About() {
               initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="p-12 border border-brand-border bg-black"
+              className="p-12 border border-brand-border"
+              style={{ backgroundColor: '#C4BCC7' }}
+
             >
               <Target className="text-brand-indigo mb-6" size={40} />
               <h2 className="text-3xl font-serif mb-4 text-brand-text">Our Mission</h2>
-              <p className="text-brand-text/70 leading-relaxed font-light">
+              <p className="text-brand-text/70 leading-relaxed font-light" >
                 To create an inclusive ecosystem where women can access the resources, 
                 networks, and knowledge necessary to elevate their personal and professional 
                 lives. We strive to break barriers and foster a culture of excellence.

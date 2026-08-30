@@ -53,7 +53,7 @@ export function Gallery() {
     };
 
     fetchGallery();
-  } [], []);
+  }, []);
 
   const uniqueYears = ['All', ...new Set(items.map(event => event.year))];
 
