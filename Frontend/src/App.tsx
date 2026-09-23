@@ -24,8 +24,7 @@ import { AdminLogin } from './pages/admin/AdminLogin';
 import { AdminGallery } from './pages/admin/AdminGallery';
 import { AdminCommunity } from './pages/admin/AdminCommunity';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
-// 👈 Import your Admin Sidebar component here
-// import { AdminSidebar } from './components/admin/AdminSidebar'; 
+import { AdminShop } from './pages/admin/AdminShop'; 
 
 /* ==========================================
    👥 PUBLIC SITE LAYOUT WRAPPER
@@ -87,6 +86,7 @@ export default function App() {
           <Route element={<ProtectedRoute />}>
             <Route element={<AdminLayout />}>
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              <Route path="/admin/shop" element={<AdminShop />} />
               <Route path="/admin/gallery" element={<AdminGallery />} />
               <Route path="/admin/community" element={<AdminCommunity />} />
             </Route>

@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Image, Newspaper, LogOut, LayoutDashboard } from 'lucide-react';
+import { Image, Newspaper, LogOut, LayoutDashboard, ShoppingBag } from 'lucide-react';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -9,10 +9,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    // For now, clear credentials and boot to login
     localStorage.removeItem('awe_token');
     localStorage.removeItem('awe_role');
-    navigate('/login');
+    navigate('/admin/login');
   };
 
   return (
@@ -23,7 +22,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           {/* Dashboard Header */}
           <div className="h-20 flex items-center px-6 border-b border-pink-200">
             <span className="font-serif text-lg font-bold tracking-wider text-pink-900">
-              AWE Control Hub
+              Alpha Women Elevates Control Hub
             </span>
           </div>
 
@@ -34,8 +33,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               className="flex items-center gap-3 px-4 py-3 text-xs font-bold uppercase tracking-wider text-pink-800 hover:text-pink-950 hover:bg-pink-200/60 transition-colors rounded"
             >
               <LayoutDashboard size={16} />
-              Overview
+              Dashboard
             </Link>
+
+            {/* FIXED ROUTE & ICON FOR GALLERY */}
             <Link
               to="/admin/gallery"
               className="flex items-center gap-3 px-4 py-3 text-xs font-bold uppercase tracking-wider text-pink-800 hover:text-pink-950 hover:bg-pink-200/60 transition-colors rounded"
@@ -43,6 +44,16 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               <Image size={16} />
               Manage Gallery
             </Link>
+
+            {/* FIXED ROUTE & ICON FOR SHOP */}
+            <Link
+              to="/admin/shop"
+              className="flex items-center gap-3 px-4 py-3 text-xs font-bold uppercase tracking-wider text-pink-800 hover:text-pink-950 hover:bg-pink-200/60 transition-colors rounded"
+            >
+              <ShoppingBag size={16} />
+              Shop
+            </Link>
+
             <Link
               to="/admin/community"
               className="flex items-center gap-3 px-4 py-3 text-xs font-bold uppercase tracking-wider text-pink-800 hover:text-pink-950 hover:bg-pink-200/60 transition-colors rounded"

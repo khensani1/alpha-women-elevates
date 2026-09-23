@@ -8,7 +8,7 @@ interface EventItem {
   title: string;
   date: string;
   location: string;
-  price?: number; // 0 or undefined for free events
+  price?: number; 
 }
 
 interface NewsletterItem {

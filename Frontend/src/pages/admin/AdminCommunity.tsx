@@ -13,6 +13,7 @@ interface EventRecord {
   title: string;
   date: string;
   location: string;
+  price?: number | string;
 }
 
 export function AdminCommunity() {
@@ -22,6 +23,7 @@ export function AdminCommunity() {
   const [eventTitle, setEventTitle] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [eventLocation, setEventLocation] = useState(''); 
+  const [eventPrice, setEventPrice] = useState<string>(''); // empty or numeric value
 
   const [newsletters, setNewsletters] = useState<NewsletterRecord[]>([]);
   const [events, setEvents] = useState<EventRecord[]>([]);
@@ -56,7 +58,6 @@ export function AdminCommunity() {
         body: JSON.stringify({ title: newsTitle, content: newsContent })
       });
 
-      // Catch raw HTML errors cleanly before processing as JSON
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
         const fallbackRawText = await response.text();
@@ -68,7 +69,6 @@ export function AdminCommunity() {
 
       alert('Newsletter published successfully!');
       
-      // Handle wrapped or flat backend payload structure safely
       const finalNewsItem = result.data || result;
       setNewsletters([finalNewsItem, ...newsletters]);
       
@@ -79,24 +79,32 @@ export function AdminCommunity() {
     }
   };
 
-  const handleCreateEvent = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!eventTitle || !eventDate || !eventLocation) {
-      return alert('Please provide an event name, target date, and physical/virtual location.');
-    }
+const handleCreateEvent = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!eventTitle || !eventDate || !eventLocation) {
+    return alert('Please provide an event name, target date, and physical/virtual location.');
+  }
 
-    try {
-      const token = localStorage.getItem('awe_token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/events`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ title: eventTitle, date: eventDate, location: eventLocation })
-      });
+  // Ensure price parses cleanly to a number; fallback to 0 if invalid/empty
+  const parsedPrice = eventPrice ? parseFloat(eventPrice) : 0;
 
-      // Catch raw HTML errors cleanly before processing as JSON
+  try {
+    const token = localStorage.getItem('awe_token');
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/events`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ 
+        title: eventTitle, 
+        date: eventDate, 
+        location: eventLocation,
+        price: parsedPrice 
+      })
+    });
+
+
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
         const fallbackRawText = await response.text();
@@ -108,16 +116,24 @@ export function AdminCommunity() {
 
       alert('Upcoming Event posted live!');
       
-      // Handle wrapped or flat backend payload structure safely
       const finalEventItem = result.data || result;
       setEvents([finalEventItem, ...events]);
 
       setEventTitle('');
       setEventDate('');
       setEventLocation('');
+      setEventPrice('');
     } catch (err: any) {
       alert(`Scheduling failed: ${err.message}`);
     }
+  };
+
+  const formatPriceLabel = (price?: number | string) => {
+    const parsed = typeof price === 'string' ? parseFloat(price) : price;
+    if (!parsed || parsed === 0) {
+      return <span className="text-emerald-700 font-bold uppercase tracking-wider text-[10px]">Free</span>;
+    }
+    return <span className="font-semibold text-neutral-800">R{parsed.toFixed(2)}</span>;
   };
 
   return (
@@ -220,15 +236,30 @@ export function AdminCommunity() {
                     placeholder="e.g. Johannesburg, SA or Zoom" 
                   />
                 </div>
-                <div>
-                  <label className="block text-[10px] uppercase font-bold tracking-wider mb-1 text-neutral-700">Target Date</label>
-                  <input 
-                    type="date" 
-                    value={eventDate} 
-                    onChange={(e) => setEventDate(e.target.value)} 
-                    className="w-full border border-neutral-400 p-2 text-xs rounded text-neutral-900 focus:outline-none focus:border-brand-indigo" 
-                    style={{ backgroundColor: '#C4BCC7' }}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] uppercase font-bold tracking-wider mb-1 text-neutral-700">Target Date</label>
+                    <input 
+                      type="date" 
+                      value={eventDate} 
+                      onChange={(e) => setEventDate(e.target.value)} 
+                      className="w-full border border-neutral-400 p-2 text-xs rounded text-neutral-900 focus:outline-none focus:border-brand-indigo" 
+                      style={{ backgroundColor: '#C4BCC7' }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase font-bold tracking-wider mb-1 text-neutral-700">Ticket Price (ZAR)</label>
+                    <input 
+                      type="number" 
+                      min="0"
+                      step="0.01"
+                      value={eventPrice} 
+                      onChange={(e) => setEventPrice(e.target.value)} 
+                      className="w-full border border-neutral-400 p-2 text-xs rounded text-neutral-900 focus:outline-none focus:border-brand-indigo placeholder:text-neutral-500" 
+                      style={{ backgroundColor: '#C4BCC7' }}
+                      placeholder="0 for Free" 
+                    />
+                  </div>
                 </div>
                 <button type="submit" className="w-full bg-brand-sunset text-white py-3 text-[10px] font-bold uppercase tracking-widest hover:opacity-90 transition-colors rounded cursor-pointer">
                   Lock Event Date
@@ -249,7 +280,11 @@ export function AdminCommunity() {
                     <div key={evt.id} className="py-3 flex justify-between items-center">
                       <div>
                         <span className="text-neutral-900 font-medium block">{evt.title}</span>
-                        <span className="text-[10px] text-neutral-600">{evt.location}</span>
+                        <div className="flex items-center gap-2 text-[10px] text-neutral-600 mt-0.5">
+                          <span>{evt.location}</span>
+                          <span>•</span>
+                          {formatPriceLabel(evt.price)}
+                        </div>
                       </div>
                       <span className="text-brand-sunset font-bold">{evt.date}</span>
                     </div>

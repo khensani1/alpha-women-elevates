@@ -144,11 +144,14 @@ router.get('/events', async (req, res) => {
 
 // Protected Publish Route (Matches Admin Panel Event Submission form)
 router.post('/events', verifyAdminToken, async (req, res) => {
-  const { title, date, location } = req.body;
+  // 1. Extract 'price' from req.body
+  const { title, date, location, price } = req.body;
+  
   try {
+    // 2. Pass 'price' as parameter $4 in your SQL INSERT query
     const newEvent = await pool.query(
-      'INSERT INTO events (title, date, location) VALUES ($1, $2, $3) RETURNING *',
-      [title, date, location]
+      'INSERT INTO events (title, date, location, price) VALUES ($1, $2, $3, $4) RETURNING *',
+      [title, date, location, price !== undefined ? price : 0]
     );
     res.status(201).json({ message: 'Upcoming Event posted live!', data: newEvent.rows[0] });
   } catch (err) {
