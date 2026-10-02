@@ -144,14 +144,14 @@ router.get('/events', async (req, res) => {
 
 // Protected Publish Route (Matches Admin Panel Event Submission form)
 router.post('/events', verifyAdminToken, async (req, res) => {
-  // 1. Extract 'price' from req.body
-  const { title, date, location, price } = req.body;
+  const { title, date, location, price, event_type } = req.body;
   
   try {
-    // 2. Pass 'price' as parameter $4 in your SQL INSERT query
+    const derivedType = event_type || (Number(price) > 0 ? 'paid' : 'free');
+
     const newEvent = await pool.query(
-      'INSERT INTO events (title, date, location, price) VALUES ($1, $2, $3, $4) RETURNING *',
-      [title, date, location, price !== undefined ? price : 0]
+      'INSERT INTO events (title, date, location, price, event_type) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [title, date, location, price !== undefined ? price : 0, derivedType]
     );
     res.status(201).json({ message: 'Upcoming Event posted live!', data: newEvent.rows[0] });
   } catch (err) {
@@ -276,6 +276,109 @@ router.put('/products/:id', verifyAdminToken, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal database failure updating product features.' });
+  }
+});
+
+/* ==========================================
+   🎟️ 7. SCANNER & ATTENDANCE OPERATIONS
+   ========================================== */
+
+// Verify QR Token & Record Attendance
+router.post('/scan-ticket', verifyAdminToken, async (req, res) => {
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(400).json({ success: false, message: 'QR scan token is required.' });
+  }
+
+  let client;
+  try {
+    client = await pool.connect();
+    await client.query('BEGIN');
+
+    // Fetch ticket details & associated event classification
+    const ticketRes = await client.query(
+      `SELECT t.*, COALESCE(e.event_type, CASE WHEN e.price > 0 THEN 'paid' ELSE 'free' END) AS event_type, e.title AS event_title
+       FROM event_tickets t 
+       JOIN events e ON t.event_id = e.id 
+       WHERE t.ticket_token = $1`,
+      [token]
+    );
+
+    if (ticketRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ success: false, message: 'Invalid ticket or ticket not found.' });
+    }
+
+    const ticket = ticketRes.rows[0];
+
+    if (ticket.status === 'used') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ success: false, message: '⚠️ Alert: Ticket has already been scanned!' });
+    }
+
+    // Check member database table to verify current membership status
+    const memberCheck = await client.query(
+      `SELECT id FROM members WHERE LOWER(email) = LOWER($1)`,
+      [ticket.customer_email]
+    );
+    const isMember = memberCheck.rows.length > 0;
+
+    // Mark ticket status as used
+    await client.query(
+      `UPDATE event_tickets SET status = 'used' WHERE id = $1`,
+      [ticket.id]
+    );
+
+    // Record verified entry into attendance log
+    await client.query(
+      `INSERT INTO event_attendance (ticket_id, event_id, customer_email, is_member, event_type)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [ticket.id, ticket.event_id, ticket.customer_email, isMember, ticket.event_type || 'paid']
+    );
+
+    await client.query('COMMIT');
+
+    res.status(200).json({
+      success: true,
+      message: '✅ Ticket verified! Attendance registered.',
+      attendee: {
+        email: ticket.customer_email,
+        eventTitle: ticket.event_title,
+        isMember: isMember,
+        eventType: ticket.event_type || 'paid'
+      }
+    });
+
+  } catch (err) {
+    if (client) await client.query('ROLLBACK');
+    console.error('Scan Ticket Processing Error:', err);
+    res.status(500).json({ success: false, error: 'Database transaction error scanning ticket.' });
+  } finally {
+    if (client) client.release();
+  }
+});
+
+// Member vs Non-Member Attendance Leaderboard for Gifting
+router.get('/attendance-metrics', verifyAdminToken, async (req, res) => {
+  try {
+    const reportQuery = `
+      SELECT 
+        customer_email,
+        is_member,
+        COUNT(CASE WHEN event_type = 'paid' THEN 1 END) AS paid_events_attended,
+        COUNT(CASE WHEN event_type = 'free' THEN 1 END) AS free_events_attended,
+        COUNT(*) AS total_events_attended
+      FROM event_attendance
+      GROUP BY customer_email, is_member
+      ORDER BY total_events_attended DESC, paid_events_attended DESC;
+    `;
+
+    const result = await pool.query(reportQuery);
+    res.status(200).json({ success: true, leaderboard: result.rows });
+  } catch (err) {
+    console.error('Attendance Metrics Error:', err);
+    res.status(500).json({ success: false, error: 'Failed to generate attendance leaderboard.' });
   }
 });
 

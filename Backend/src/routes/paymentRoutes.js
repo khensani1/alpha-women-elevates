@@ -6,26 +6,30 @@ import { sendOrderNotificationToAdmin } from '../utils/mailer.js';
 
 const router = express.Router();
 
-
 router.post('/payfast-checkout', (req, res) => {
-  const { amount, item_name } = req.body;
+  const { amount, item_name, email, cartItems } = req.body;
+
+  // Use environment variable for the frontend origin with localhost fallback
+  const clientUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
   const payfastData = {
     merchant_id: process.env.PAYFAST_MERCHANT_ID || '10000100', 
     merchant_key: process.env.PAYFAST_MERCHANT_KEY || '46f0cd694581a', 
-    return_url: 'http://localhost:5173/cart?payment=success', 
-    cancel_url: 'http://localhost:5173/cart?payment=cancelled',
-    notify_url: 'https://your-domain.render.com/api/payments/payfast-notify', 
+    return_url: `${clientUrl}/cart?payment=success`, 
+    cancel_url: `${clientUrl}/cart?payment=cancelled`,
+    notify_url: process.env.PAYFAST_NOTIFY_URL || 'https://your-backend-domain.com/api/payments/payfast-notify', 
     name_first: 'AWE',
     name_last: 'Customer',
+    email_address: email || 'customer@example.com',
     amount: parseFloat(amount).toFixed(2),
-    item_name: item_name,
+    item_name: item_name || 'Alpha Women Elevates Order',
+    custom_str1: JSON.stringify(cartItems || [])
   };
 
   let paramString = '';
   for (const key in payfastData) {
     if (payfastData.hasOwnProperty(key)) {
-      paramString += `${key}=${encodeURIComponent(payfastData[key].trim()).replace(/%20/g, '+')}&`;
+      paramString += `${key}=${encodeURIComponent(payfastData[key].toString().trim()).replace(/%20/g, '+')}&`;
     }
   }
   paramString = paramString.slice(0, -1); 
@@ -35,11 +39,15 @@ router.post('/payfast-checkout', (req, res) => {
   }
   const signature = crypto.createHash('md5').update(paramString).digest('hex');
 
-  const payfastUrl = `https://sandbox.payfast.co.za/eng/process?${paramString}&signature=${signature}`;
+  // Toggle between Sandbox and Live production endpoint based on NODE_ENV or custom flag
+  const payfastHost = process.env.PAYFAST_ENV === 'production' 
+    ? 'https://www.payfast.co.za' 
+    : 'https://sandbox.payfast.co.za';
+
+  const payfastUrl = `${payfastHost}/eng/process?${paramString}&signature=${signature}`;
 
   res.status(200).json({ url: payfastUrl });
 });
-
 
 export const handlePayFastCallback = async (req, res) => {
   // PayFast sends transaction data in the request body

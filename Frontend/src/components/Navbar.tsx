@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Menu, X, ShoppingCart } from 'lucide-react'; 
+import { Menu, X, ShoppingCart, User } from 'lucide-react'; 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useCart } from '../context/CartContext'; // Import the cart hook
@@ -41,21 +41,41 @@ export function Navbar() {
               </Link>
             ))}
 
-            {/* Desktop Cart Icon Component with Live Badge */}
-            <Link to="/cart" className="relative p-2 text-brand-text hover:text-brand-indigo transition-colors flex items-center">
-              <ShoppingCart size={18} />
-              {totalItems > 0 && (
-                <span className="absolute -top-1 -right-1 bg-brand-luxury text-brand-text text-[8px] font-bold w-4 h-4 rounded-full flex items-center justify-center animate-pulse">
-                  {totalItems}
-                </span>
-              )}
-            </Link>
+            <div className="flex items-center space-x-4 border-l border-brand-border pl-6">
+              {/* Desktop Profile Icon Link */}
+              <Link 
+                to="/profile" 
+                title="Member Profile & Orders"
+                className="p-2 text-brand-text hover:text-brand-indigo transition-colors flex items-center"
+              >
+                <User size={18} />
+              </Link>
+
+              {/* Desktop Cart Icon Component with Live Badge */}
+              <Link 
+                to="/cart" 
+                title="Shopping Cart"
+                className="relative p-2 text-brand-text hover:text-brand-indigo transition-colors flex items-center"
+              >
+                <ShoppingCart size={18} />
+                {totalItems > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-brand-luxury text-brand-text text-[8px] font-bold w-4 h-4 rounded-full flex items-center justify-center animate-pulse">
+                    {totalItems}
+                  </span>
+                )}
+              </Link>
+            </div>
           </div>
 
           {/* Mobile Right Actions Alignment */}
-          <div className="md:hidden flex items-center space-x-4">
+          <div className="md:hidden flex items-center space-x-2">
+            {/* Mobile Profile Icon Link */}
+            <Link to="/profile" className="p-2 text-brand-text flex items-center" title="Member Profile">
+              <User size={20} />
+            </Link>
+
             {/* Mobile Cart Button Option */}
-            <Link to="/cart" className="relative p-2 text-brand-text flex items-center">
+            <Link to="/cart" className="relative p-2 text-brand-text flex items-center" title="Shopping Cart">
               <ShoppingCart size={20} />
               {totalItems > 0 && (
                 <span className="absolute top-0 right-0 bg-brand-luxury text-brand-text text-[8px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
@@ -92,13 +112,25 @@ export function Navbar() {
                   {link.name}
                 </Link>
               ))}
-              <Link
-                to="/signup"
-                onClick={() => setIsOpen(false)}
-                className="block w-full bg-brand-luxury text-brand-text text-center py-5 text-[10px] font-bold uppercase tracking-[0.2em]"
-              >
-                Membership Access
-              </Link>
+
+              <div className="pt-4 border-t border-brand-border space-y-4">
+                <Link
+                  to="/profile"
+                  onClick={() => setIsOpen(false)}
+                  className="flex items-center gap-3 text-lg font-serif text-brand-text"
+                >
+                  <User size={20} />
+                  <span>Member Profile & History</span>
+                </Link>
+
+                <Link
+                  to="/signup"
+                  onClick={() => setIsOpen(false)}
+                  className="block w-full bg-brand-luxury text-brand-text text-center py-4 text-[10px] font-bold uppercase tracking-[0.2em]"
+                >
+                  Membership Access
+                </Link>
+              </div>
             </div>
           </motion.div>
         )}

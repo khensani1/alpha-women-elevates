@@ -25,7 +25,7 @@ export function Cart() {
   const [customerEmail, setCustomerEmail] = useState('');
   const [searchParams] = useSearchParams();
 
-  // 🔄 New UI States to handle tracking within the Cart page
+  // 🔄 UI States to handle tracking within the Cart page
   const [isTrackingMode, setIsTrackingMode] = useState(false);
   const [trackingEmail, setTrackingEmail] = useState('');
   const [orders, setOrders] = useState<Order[]>([]);
@@ -58,14 +58,14 @@ export function Cart() {
         body: JSON.stringify({
           amount: getCartTotal(),
           item_name: `Alpha Women Elevates Order`,
-          email_address: customerEmail,
-          custom_str1: JSON.stringify(cartItems.map(item => ({
+          email: customerEmail.trim(),
+          cartItems: cartItems.map(item => ({
             name: item.name,
             quantity: item.quantity,
             size: item.selectedSize || 'N/A',   
             color: item.selectedColor || 'N/A', 
             price: item.price
-          })))
+          }))
         }),
       });
 
@@ -97,9 +97,9 @@ export function Cart() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || data.error || 'Failed to retrieve track history.');
+        throw new Error(data.message || data.error || 'Failed to retrieve tracking history.');
       }
-      setOrders(data.orders);
+      setOrders(data.orders || []);
     } catch (err: any) {
       setTrackingError(err.message);
     } finally {
@@ -254,7 +254,7 @@ export function Cart() {
                   <span>R{getCartTotal()}</span>
                 </div>
 
-                <div className="mt-8 pt-6 border-t border-brand-text/10">
+                <form onSubmit={handleCheckout} className="mt-8 pt-6 border-t border-brand-text/10">
                   <label htmlFor="email" className="block text-xs font-bold uppercase tracking-wider mb-2">
                     Order Delivery Email Address
                   </label>
@@ -265,17 +265,17 @@ export function Cart() {
                     value={customerEmail}
                     onChange={(e) => setCustomerEmail(e.target.value)}
                     placeholder="Enter your email to track your delivery status"
-                    className="w-full bg-transparent border border-brand-text/20 p-3 text-sm focus:outline-none focus:border-brand-luxury text-brand-text placeholder:text-brand-muted"
+                    className="w-full bg-transparent border border-brand-text/20 p-3 text-sm focus:outline-none focus:border-brand-luxury text-brand-text placeholder:text-brand-muted mb-4"
                   />
-                </div>
 
-                <button
-                  onClick={handleCheckout}
-                  disabled={loading}
-                  className="w-full bg-brand-luxury text-brand-text py-4 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-brand-indigo transition-colors cursor-pointer disabled:opacity-50 mt-4"
-                >
-                  {loading ? 'Processing Checkout...' : 'Proceed to checkout'}
-                </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-brand-luxury text-brand-text py-4 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-brand-indigo transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {loading ? 'Processing Checkout...' : 'Proceed to checkout'}
+                  </button>
+                </form>
               </div>
             )}
           </div>
