@@ -92,7 +92,6 @@ const initDb = async () => {
 
   try {
     // Run these in strict order so dependencies match up cleanly
-    await pool.query(`DROP TABLE IF EXISTS events CASCADE;`);
     await pool.query(createOrderTable);
     await pool.query(createOrderItemTable);
     await pool.query(createMembersTable);
