@@ -9,7 +9,7 @@ import { verifyAdminToken } from './authMiddleware.js';
 import { Resend } from 'resend';
 
 const router = express.Router();
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY || 're_placeholder_key');
 
 /* ==========================================
    📦 CONFIGURING LOCAL COMPUTER DISK STORAGE
