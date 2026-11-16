@@ -25,29 +25,36 @@ app.use('/api/tracking', trackingRoutes);
 app.use('/api/gallery', adminRoutes);
 app.use('/api/events', eventsRouter);
 
-// Helper function to generate PayFast MD5 Signature
-function generatePayFastSignature(data, passPhrase = null) {
-  let pfOutput = '';
-  for (let key in data) {
-    if (data.hasOwnProperty(key)) {
-      if (data[key] !== '' && data[key] !== null && data[key] !== undefined) {
-        // PayFast requires spaces encoded as '+' and uppercase hex encoding
-        pfOutput += `${key}=${encodeURIComponent(data[key].toString().trim()).replace(/%20/g, '+')}&`;
-      }
+// PayFast-compliant URL encoder (matches PHP's urlencode uppercase hex)
+function pfEncode(val) {
+  return encodeURIComponent(val.toString().trim())
+    .replace(/%20/g, '+')
+    .replace(/[!'()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+}
+
+// Builds the exact parameter string used for both the MD5 signature and redirect URL
+function buildPayFastRedirectUrl(baseUrl, params, passPhrase = null) {
+  const pairs = [];
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== '' && value !== null && value !== undefined) {
+      pairs.push(`${key}=${pfEncode(value)}`);
     }
   }
 
-  // Remove trailing '&'
-  let getString = pfOutput.slice(0, -1);
-  if (passPhrase !== null && passPhrase !== '') {
-    getString += `&passphrase=${encodeURIComponent(passPhrase.trim()).replace(/%20/g, '+')}`;
-  }
+  const paramString = pairs.join('&');
+  const stringToHash =
+    passPhrase && passPhrase.trim() !== ''
+      ? `${paramString}&passphrase=${pfEncode(passPhrase)}`
+      : paramString;
 
-  return crypto.createHash('md5').update(getString).digest('hex');
+  const signature = crypto.createHash('md5').update(stringToHash).digest('hex');
+
+  return `${baseUrl}?${paramString}&signature=${signature}`;
 }
 
 app.get('/', (req, res) => {
-  res.json({ message: "API Running smoothly 🚀" });
+  res.json({ message: 'API Running smoothly 🚀' });
 });
 
 app.get('/api/community-link', (req, res) => {
@@ -59,7 +66,12 @@ app.post('/api/initialize-subscription', async (req, res) => {
   const { name, surname, email } = req.body;
 
   if (!name || !surname || !email) {
-    return res.status(400).json({ error: "Profile details are required to initialize subscription." });
+    return res.status(400).json({ error: 'Profile details are required to initialize subscription.' });
+  }
+
+  if (!process.env.PAYFAST_MERCHANT_ID || !process.env.PAYFAST_MERCHANT_KEY || !process.env.BACKEND_URL) {
+    console.error('Missing PayFast or BACKEND_URL environment variables on Render!');
+    return res.status(500).json({ error: 'Server payment configuration is incomplete.' });
   }
 
   try {
@@ -80,8 +92,8 @@ app.post('/api/initialize-subscription', async (req, res) => {
     const params = {
       merchant_id: process.env.PAYFAST_MERCHANT_ID,
       merchant_key: process.env.PAYFAST_MERCHANT_KEY,
-      return_url: process.env.PAYFAST_RETURN_URL,
-      cancel_url: process.env.PAYFAST_CANCEL_URL,
+      return_url: process.env.PAYFAST_RETURN_URL || 'https://alpha-women-elevates.vercel.app/payment-success',
+      cancel_url: process.env.PAYFAST_CANCEL_URL || 'https://alpha-women-elevates.vercel.app/payment-cancelled',
       notify_url: `${process.env.BACKEND_URL}/api/payfast-itn`,
 
       name_first: name,
@@ -98,21 +110,22 @@ app.post('/api/initialize-subscription', async (req, res) => {
       cycles: '0'
     };
 
-    // Generate MD5 Signature using your Passphrase
-    params.signature = generatePayFastSignature(params, process.env.PAYFAST_PASSPHRASE);
+    const redirectUrl = buildPayFastRedirectUrl(
+      payfastUrl,
+      params,
+      process.env.PAYFAST_PASSPHRASE
+    );
 
-    const queryString = new URLSearchParams(params).toString();
-    res.json({ redirectUrl: `${payfastUrl}?${queryString}` });
-
+    res.json({ redirectUrl });
   } catch (error) {
-    console.error("Subscription initiation breakdown:", error);
-    res.status(500).json({ error: "Failed to initialize secure checkout engine." });
+    console.error('Subscription initiation breakdown:', error.message);
+    res.status(500).json({ error: error.message || 'Failed to initialize secure checkout engine.' });
   }
 });
 
 // ITN Webhook: PayFast calls this automatically when payment succeeds
 app.post('/api/payfast-itn', async (req, res) => {
-  console.log("🔔 PayFast ITN Received:", req.body);
+  console.log('🔔 PayFast ITN Received:', req.body);
   const { payment_status, email_address, token } = req.body;
 
   try {
@@ -128,7 +141,7 @@ app.post('/api/payfast-itn', async (req, res) => {
     // Always return 200 OK so PayFast stops retrying
     res.status(200).send('OK');
   } catch (err) {
-    console.error("ITN Database Update Error:", err);
+    console.error('ITN Database Update Error:', err);
     res.status(500).send('Server Error');
   }
 });
