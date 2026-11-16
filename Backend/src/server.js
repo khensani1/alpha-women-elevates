@@ -90,18 +90,18 @@ app.post('/api/initialize-subscription', async (req, res) => {
 
     // IMPORTANT: Parameter order matters for PayFast signature validation!
     const params = {
-      merchant_id: process.env.PAYFAST_MERCHANT_ID,
-      merchant_key: process.env.PAYFAST_MERCHANT_KEY,
-      return_url: process.env.PAYFAST_RETURN_URL || 'https://alpha-women-elevates.vercel.app/payment-success',
-      cancel_url: process.env.PAYFAST_CANCEL_URL || 'https://alpha-women-elevates.vercel.app/payment-cancelled',
-      notify_url: `${process.env.BACKEND_URL}/api/payfast-itn`,
+      merchant_id: process.env.PAYFAST_MERCHANT_ID.trim(),
+      merchant_key: process.env.PAYFAST_MERCHANT_KEY.trim(),
+      return_url: (process.env.PAYFAST_RETURN_URL || 'https://alpha-women-elevates.vercel.app/community?payment=success').trim(),
+      cancel_url: (process.env.PAYFAST_CANCEL_URL || 'https://alpha-women-elevates.vercel.app/community?payment=cancelled').trim(),
+      notify_url: `${process.env.BACKEND_URL.trim()}/api/payfast-itn`,
 
-      name_first: name,
-      name_last: surname,
-      email_address: email,
+      name_first: name.trim(),
+      name_last: surname.trim(),
+      email_address: email.trim(),
 
-      item_name: 'Alpha Women Elevates Monthly Membership',
       amount: '100.00',
+      item_name: 'Alpha Women Elevates Monthly Membership',
 
       subscription_type: '1',
       billing_date: new Date().toISOString().split('T')[0],
