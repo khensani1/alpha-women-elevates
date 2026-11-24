@@ -3,10 +3,14 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import crypto from 'crypto'; // Built-in Node module for PayFast MD5 signature
 import pool from './db.js';
-import paymentRoutes from './routes/paymentRoutes.js';
+import paymentRoutes, { handlePayFastCallback } from './routes/paymentRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import trackingRoutes from './routes/tracking.js';
 import eventsRouter from './routes/events.js';
+import {
+  sendPaymentSuccessEmail,
+  sendUnsubscribeRequestToAdmin,
+} from './utils/mailer.js';
 
 dotenv.config();
 
@@ -20,6 +24,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 
 app.use('/api/payments', paymentRoutes);
+app.post('/api/payments/payfast-notify', handlePayFastCallback);
 app.use('/api/admin', adminRoutes);
 app.use('/api/tracking', trackingRoutes);
 app.use('/api/gallery', adminRoutes);
@@ -123,27 +128,120 @@ app.post('/api/initialize-subscription', async (req, res) => {
   }
 });
 
-// ITN Webhook: PayFast calls this automatically when payment succeeds
+// ITN Webhook: PayFast calls this automatically when payment succeeds / fails / cancels
 app.post('/api/payfast-itn', async (req, res) => {
   console.log('🔔 PayFast ITN Received:', req.body);
-  const { payment_status, email_address, token } = req.body;
+  const {
+    payment_status,
+    email_address,
+    token,
+    amount_gross,
+    pf_payment_id,
+  } = req.body;
 
   try {
-    if (payment_status === 'COMPLETE' && email_address) {
+    if (email_address && payment_status === 'COMPLETE') {
       await pool.query(
         `UPDATE members 
-         SET subscription_status = 'active', payfast_token = $1 
-         WHERE email = $2`,
+         SET subscription_status = 'active',
+             payfast_token = COALESCE($1, payfast_token),
+             last_payment_at = CURRENT_TIMESTAMP,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE LOWER(email) = LOWER($2)`,
         [token || null, email_address]
       );
-      console.log(`✅ Member ${email_address} activated!`);
+
+      await pool.query(
+        `INSERT INTO membership_payments (member_email, amount, payment_status, payfast_payment_id)
+         VALUES ($1, $2, $3, $4)`,
+        [email_address, amount_gross || 100, 'COMPLETE', pf_payment_id || null]
+      );
+
+      try {
+        await sendPaymentSuccessEmail({
+          to: email_address,
+          amount: amount_gross || '100.00',
+          paymentType: 'Monthly Membership',
+          reference: pf_payment_id || 'Membership',
+        });
+      } catch (emailErr) {
+        console.error('Membership payment email failed:', emailErr);
+      }
+
+      console.log(`✅ Member ${email_address} activated / payment recorded!`);
+    } else if (email_address && (payment_status === 'FAILED' || payment_status === 'CANCELLED')) {
+      const fallbackStatus = payment_status === 'CANCELLED' ? 'cancelled' : 'failed';
+      await pool.query(
+        `UPDATE members
+         SET subscription_status = $1, updated_at = CURRENT_TIMESTAMP
+         WHERE LOWER(email) = LOWER($2)`,
+        [fallbackStatus, email_address]
+      );
+      console.log(`⚠️ Member ${email_address} marked as ${fallbackStatus}`);
     }
-    // Always return 200 OK so PayFast stops retrying
+
     res.status(200).send('OK');
   } catch (err) {
     console.error('ITN Database Update Error:', err);
     res.status(500).send('Server Error');
   }
+});
+
+/* ==========================================
+   🚫 MEMBERSHIP UNSUBSCRIBE (public)
+   ========================================== */
+async function processUnsubscribe(email, res) {
+  const normalized = (email || '').trim();
+
+  if (!normalized) {
+    return res.status(400).json({ error: 'Email is required to unsubscribe.' });
+  }
+
+  try {
+    const memberRes = await pool.query(
+      `SELECT id, name, surname, email, subscription_status FROM members WHERE LOWER(email) = LOWER($1)`,
+      [normalized]
+    );
+
+    if (memberRes.rows.length === 0) {
+      return res.status(404).json({ error: 'No membership found for this email.' });
+    }
+
+    const member = memberRes.rows[0];
+
+    await pool.query(
+      `UPDATE members
+       SET subscription_status = 'cancelled', updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1`,
+      [member.id]
+    );
+
+    try {
+      await sendUnsubscribeRequestToAdmin({
+        email: member.email,
+        name: member.name,
+        surname: member.surname,
+      });
+    } catch (emailErr) {
+      console.error('Unsubscribe admin notification failed:', emailErr);
+    }
+
+    return res.json({
+      success: true,
+      message: 'Unsubscribe request received. Our team has been notified and will process your cancellation.',
+    });
+  } catch (err) {
+    console.error('Unsubscribe error:', err);
+    return res.status(500).json({ error: 'Failed to process unsubscribe request.' });
+  }
+}
+
+app.post('/api/unsubscribe', async (req, res) => {
+  return processUnsubscribe(req.body.email || req.query.email, res);
+});
+
+app.get('/api/unsubscribe', async (req, res) => {
+  return processUnsubscribe(req.query.email, res);
 });
 
 app.listen(PORT, '0.0.0.0', () => {

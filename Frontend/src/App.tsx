@@ -19,6 +19,7 @@ import { Cart } from './pages/Cart';
 import { Gallery } from './components/Gallery';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Profile } from './pages/Profile';
+import { Unsubscribe } from './pages/Unsubscribe';
 
 // Admin Imports
 import { AdminLogin } from './pages/admin/AdminLogin';
@@ -26,7 +27,8 @@ import { AdminGallery } from './pages/admin/AdminGallery';
 import { AdminCommunity } from './pages/admin/AdminCommunity';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { AdminShop } from './pages/admin/AdminShop'; 
-import {AdminScanner} from './pages/admin/AdminScanner';
+import { AdminScanner } from './pages/admin/AdminScanner';
+import { AdminTracking } from './pages/admin/AdminTracking';
 
 /* ==========================================
    👥 PUBLIC SITE LAYOUT WRAPPER
@@ -80,6 +82,7 @@ export default function App() {
             <Route path="/cart" element={<Cart />} />
             <Route path="/gallery" element={<Gallery />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/unsubscribe" element={<Unsubscribe />} />
           </Route>
 
           {/* 🔐 BACKEND SIGN-IN SPACE (No navbar, footer, or sidebar) */}
@@ -90,6 +93,7 @@ export default function App() {
             <Route element={<AdminLayout />}>
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/shop" element={<AdminShop />} />
+              <Route path="/admin/tracking" element={<AdminTracking />} />
               <Route path="/admin/gallery" element={<AdminGallery />} />
               <Route path="/admin/community" element={<AdminCommunity />} />
               <Route path="/admin/scanner" element={<AdminScanner />} />

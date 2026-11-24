@@ -8,6 +8,14 @@ const resend = new Resend(process.env.RESEND_API_KEY || 're_placeholder_key');
 const FROM_EMAIL = process.env.EMAIL_FROM || 'AWE System <onboarding@resend.dev>';
 
 /**
+ * Builds a frontend unsubscribe URL for membership emails
+ */
+export const buildUnsubscribeUrl = (email) => {
+  const clientUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  return `${clientUrl}/unsubscribe?email=${encodeURIComponent(email)}`;
+};
+
+/**
  * Generic sendEmail function required by event routes & delivery notifications
  */
 export const sendEmail = async ({ to, subject, html, attachments = [] }) => {
@@ -124,12 +132,129 @@ export const sendOrderReceiptToCustomer = async (orderData, items) => {
             <span style="font-size: 14px; text-transform: uppercase; color: #666;">Total Paid: </span>
             <strong style="font-size: 20px; color: #4A154B;">R${orderData.total_amount}</strong>
           </div>
+
+          <p style="margin-top: 28px; font-size: 12px; color: #666; text-align: center;">
+            Membership members can manage billing anytime.
+            <a href="${buildUnsubscribeUrl(orderData.customer_email)}" style="color: #4A154B;">Unsubscribe from membership</a>
+          </p>
         </div>
       `,
     });
     return data;
   } catch (error) {
     console.error("Failed to send customer order receipt via Resend:", error);
+    throw error;
+  }
+};
+
+/**
+ * Payment success receipt (membership or shop) with unsubscribe link
+ */
+export const sendPaymentSuccessEmail = async ({ to, amount, paymentType, reference }) => {
+  const unsubscribeUrl = buildUnsubscribeUrl(to);
+
+  try {
+    const data = await resend.emails.send({
+      from: FROM_EMAIL,
+      to,
+      subject: `Payment Confirmed — Alpha Women Elevates (${paymentType})`,
+      html: `
+        <div style="font-family: Georgia, serif; max-width: 600px; margin: auto; padding: 24px; color: #2D2727; background-color: #fcfbfa; border: 1px solid #eaeaea;">
+          <h1 style="color: #4A154B; text-align: center; margin-bottom: 5px;">Alpha Women Elevates</h1>
+          <p style="text-align: center; font-style: italic; color: #666; font-size: 13px; margin-top: 0;">Your payment was successful</p>
+
+          <div style="margin-top: 24px; padding: 16px; background-color: #ffffff; border: 1px solid #e5e5e5;">
+            <p style="margin: 0 0 8px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #888;">Payment Type</p>
+            <p style="margin: 0; font-weight: bold; font-size: 16px; color: #4A154B;">${paymentType}</p>
+            ${reference ? `<p style="margin: 12px 0 0 0; font-size: 13px; color: #555;">Reference: <strong>${reference}</strong></p>` : ''}
+            <p style="margin: 12px 0 0 0; font-size: 18px; color: #4A154B;"><strong>Amount paid: R${amount}</strong></p>
+          </div>
+
+          <p style="margin-top: 24px; font-size: 13px; color: #555; line-height: 1.6;">
+            Thank you for supporting Alpha Women Elevates. If you no longer wish to continue your membership, you can request cancellation below.
+          </p>
+
+          <div style="text-align: center; margin-top: 28px;">
+            <a href="${unsubscribeUrl}" style="display: inline-block; background: #4A154B; color: #fff; padding: 12px 24px; text-decoration: none; font-size: 12px; letter-spacing: 1px; text-transform: uppercase;">
+              Unsubscribe from Membership
+            </a>
+          </div>
+
+          <p style="font-size: 11px; color: #999; text-align: center; margin-top: 24px;">
+            Or copy this link: ${unsubscribeUrl}
+          </p>
+        </div>
+      `,
+    });
+    return data;
+  } catch (error) {
+    console.error('Failed to send payment success email:', error);
+    throw error;
+  }
+};
+
+/**
+ * Notify Tersh when a member requests unsubscribe
+ */
+export const sendUnsubscribeRequestToAdmin = async ({ email, name, surname }) => {
+  const displayName = [name, surname].filter(Boolean).join(' ') || 'Member';
+
+  try {
+    const data = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: 'tershbkgaphola@gmail.com',
+      subject: `Membership Unsubscribe Request — ${email}`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee;">
+          <h2 style="color: #4A154B;">Membership Cancellation Request</h2>
+          <p>A member has requested to unsubscribe from Alpha Women Elevates membership.</p>
+          <ul>
+            <li><strong>Name:</strong> ${displayName}</li>
+            <li><strong>Email:</strong> ${email}</li>
+            <li><strong>Requested at:</strong> ${new Date().toLocaleString('en-ZA')}</li>
+          </ul>
+          <p>Please cancel their PayFast recurring billing and remove them from the active members list in the admin CRM when ready.</p>
+        </div>
+      `,
+    });
+    return data;
+  } catch (error) {
+    console.error('Failed to send unsubscribe admin email:', error);
+    throw error;
+  }
+};
+
+/**
+ * Parcel is on its way notification
+ */
+export const sendParcelOnTheWayEmail = async (order) => {
+  try {
+    const data = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: order.customer_email,
+      subject: `Your Parcel Is On Its Way — Ref: AWE-${order.id}`,
+      html: `
+        <div style="font-family: Georgia, serif; max-width: 600px; margin: auto; padding: 24px; color: #2D2727; background-color: #fcfbfa; border: 1px solid #eaeaea;">
+          <h1 style="color: #4A154B; text-align: center; margin-bottom: 5px;">Alpha Women Elevates</h1>
+          <p style="text-align: center; font-style: italic; color: #666; font-size: 13px; margin-top: 0;">Good news — your parcel is on its way</p>
+
+          <div style="margin-top: 24px; padding: 16px; background-color: #ffffff; border: 1px solid #e5e5e5;">
+            <p style="margin: 0; font-size: 14px; line-height: 1.6;">
+              Hi there,<br/><br/>
+              Your order <strong>Ref: AWE-${order.id}</strong> has left our studio and is now in transit.
+              You can track progress anytime from your Member Portal using the email you checked out with.
+            </p>
+          </div>
+
+          <p style="font-size: 12px; color: #888; text-align: center; margin-top: 24px;">
+            Questions? Reply to this email or contact tershbkgaphola@gmail.com
+          </p>
+        </div>
+      `,
+    });
+    return data;
+  } catch (error) {
+    console.error('Failed to send parcel-on-the-way email:', error);
     throw error;
   }
 };

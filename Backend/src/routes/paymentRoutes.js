@@ -2,7 +2,10 @@
 import express from 'express';
 import crypto from 'crypto';
 import pool from '../db.js'; // Adjust this path to wherever your DB pool connection is
-import { sendOrderNotificationToAdmin } from '../utils/mailer.js';
+import {
+  sendOrderNotificationToAdmin,
+  sendOrderReceiptToCustomer,
+} from '../utils/mailer.js';
 
 const router = express.Router();
 
@@ -107,10 +110,22 @@ export const handlePayFastCallback = async (req, res) => {
       await client.query('COMMIT');
       console.log(`🎉 Order #${newOrder.id} successfully saved to DB!`);
 
-      // 4. Trigger the Resend email engine to notify Tersh
-      // We pass the order summary details and the exact item breakdown arrays
-      await sendOrderNotificationToAdmin(newOrder, cartItems);
-      console.log(`✉️ Notification email sent to Tersh for Order #${newOrder.id}`);
+      // 4. Notify admin + customer (receipt includes unsubscribe link)
+      const emailItems = cartItems.map((item) => ({
+        product_name: item.product_name || item.name,
+        quantity: item.quantity,
+        size: item.size,
+        color: item.color,
+        price: item.price,
+      }));
+
+      try {
+        await sendOrderNotificationToAdmin(newOrder, emailItems);
+        await sendOrderReceiptToCustomer(newOrder, emailItems);
+        console.log(`✉️ Payment emails sent for Order #${newOrder.id}`);
+      } catch (emailErr) {
+        console.error('Order email dispatch failed:', emailErr);
+      }
 
     } catch (dbError) {
       if (client) await client.query('ROLLBACK');

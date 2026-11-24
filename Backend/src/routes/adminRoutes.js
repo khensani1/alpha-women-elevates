@@ -7,6 +7,7 @@ import multer from 'multer';
 import pool from '../db.js';
 import { verifyAdminToken } from './authMiddleware.js';
 import { Resend } from 'resend';
+import { sendParcelOnTheWayEmail } from '../utils/mailer.js';
 
 const router = express.Router();
 const resend = new Resend(process.env.RESEND_API_KEY || 're_placeholder_key');
@@ -197,6 +198,14 @@ router.patch('/orders/:id/status', verifyAdminToken, async (req, res) => {
 
     const updatedOrder = result.rows[0];
 
+    if (status === 'Shipped') {
+      try {
+        await sendParcelOnTheWayEmail(updatedOrder);
+      } catch (emailErr) {
+        console.error('Failed to dispatch parcel-on-the-way email:', emailErr);
+      }
+    }
+
     if (status === 'Delivered') {
       try {
         await resend.emails.send({
@@ -240,14 +249,33 @@ router.get('/products', async (req, res) => {
 });
 
 router.post('/products', verifyAdminToken, upload.single('image'), async (req, res) => {
-  const { name, description, price, sizes, colors, is_available } = req.body;
-  const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+  const {
+    name,
+    description = '',
+    category = 'Apparel',
+    price,
+    sizes = '',
+    colors = '',
+    image,
+    is_available = true,
+  } = req.body;
+
+  const imageUrl = req.file ? `/uploads/${req.file.filename}` : (image || null);
 
   try {
     const newProduct = await pool.query(
-      `INSERT INTO products (name, description, price, sizes, colors, image_url, is_available) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [name, description, price, sizes, colors, imageUrl, is_available === 'true' || is_available === true]
+      `INSERT INTO products (name, description, category, price, sizes, colors, image_url, is_available) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [
+        name,
+        description,
+        category,
+        price,
+        sizes,
+        colors,
+        imageUrl,
+        is_available === 'true' || is_available === true,
+      ]
     );
     res.status(201).json({ message: 'Product published to shop successfully!', data: newProduct.rows[0] });
   } catch (err) {
@@ -258,24 +286,216 @@ router.post('/products', verifyAdminToken, upload.single('image'), async (req, r
 
 router.put('/products/:id', verifyAdminToken, async (req, res) => {
   const { id } = req.params;
-  const { name, description, price, sizes, colors, is_available } = req.body;
+  const {
+    name,
+    description = '',
+    category = 'Apparel',
+    price,
+    sizes = '',
+    colors = '',
+    image,
+    image_url,
+    is_available,
+  } = req.body;
 
   try {
-    const updatedProduct = await pool.query(
-      `UPDATE products 
-       SET name = $1, description = $2, price = $3, sizes = $4, colors = $5, is_available = $6, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $7 RETURNING *`,
-      [name, description, price, sizes, colors, is_available, id]
-    );
-
-    if (updatedProduct.rows.length === 0) {
+    const existing = await pool.query('SELECT * FROM products WHERE id = $1', [id]);
+    if (existing.rows.length === 0) {
       return res.status(404).json({ error: 'Product item not found.' });
     }
+
+    const current = existing.rows[0];
+    const updatedProduct = await pool.query(
+      `UPDATE products 
+       SET name = $1, description = $2, category = $3, price = $4, sizes = $5, colors = $6,
+           image_url = $7, is_available = $8, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $9 RETURNING *`,
+      [
+        name ?? current.name,
+        description ?? current.description,
+        category ?? current.category,
+        price ?? current.price,
+        sizes ?? current.sizes,
+        colors ?? current.colors,
+        image_url || image || current.image_url,
+        is_available === undefined || is_available === null
+          ? current.is_available
+          : is_available === true || is_available === 'true',
+        id,
+      ]
+    );
 
     res.json({ message: 'Product stock updated successfully.', data: updatedProduct.rows[0] });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal database failure updating product features.' });
+  }
+});
+
+// Mark product out of stock (reflects on public shop) — preferred over hard delete
+router.patch('/products/:id/stock', verifyAdminToken, async (req, res) => {
+  const { id } = req.params;
+  const { is_available } = req.body;
+
+  try {
+    const result = await pool.query(
+      `UPDATE products
+       SET is_available = $1, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2 RETURNING *`,
+      [is_available === true || is_available === 'true', id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Product item not found.' });
+    }
+
+    res.json({
+      message: result.rows[0].is_available ? 'Product restocked.' : 'Product marked out of stock.',
+      data: result.rows[0],
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update product stock status.' });
+  }
+});
+
+router.delete('/products/:id', verifyAdminToken, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Soft-remove: mark unavailable so the public shop shows Out of Stock
+    const result = await pool.query(
+      `UPDATE products
+       SET is_available = false, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1 RETURNING *`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Product item not found.' });
+    }
+
+    res.json({ message: 'Product marked out of stock on the storefront.', data: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to remove product from active inventory.' });
+  }
+});
+
+/* ==========================================
+   📊 6b. CRM / MEMBERSHIP ANALYTICS
+   ========================================== */
+
+router.get('/crm', verifyAdminToken, async (req, res) => {
+  try {
+    const membersRes = await pool.query(
+      `SELECT id, name, surname, email, subscription_status, last_payment_at, created_at, updated_at
+       FROM members
+       ORDER BY created_at DESC`
+    );
+    const members = membersRes.rows;
+
+    const paidThisMonthRes = await pool.query(
+      `SELECT COUNT(*)::int AS count
+       FROM membership_payments
+       WHERE payment_status = 'COMPLETE'
+         AND created_at >= date_trunc('month', CURRENT_TIMESTAMP)`
+    );
+
+    const paidThisMonthMembersRes = await pool.query(
+      `SELECT COUNT(*)::int AS count
+       FROM members
+       WHERE last_payment_at >= date_trunc('month', CURRENT_TIMESTAMP)`
+    );
+
+    const signedUp = members.length;
+    const activeMembers = members.filter((m) => m.subscription_status === 'active').length;
+    const fallingBack = members.filter((m) =>
+      ['failed', 'cancelled'].includes((m.subscription_status || '').toLowerCase())
+    ).length;
+    const needsIntervention = members.filter((m) => {
+      const status = (m.subscription_status || '').toLowerCase();
+      if (status === 'intervention' || status === 'failed') return true;
+      if (status === 'pending') {
+        const created = new Date(m.created_at).getTime();
+        const threeDays = 3 * 24 * 60 * 60 * 1000;
+        return Date.now() - created > threeDays;
+      }
+      return false;
+    }).length;
+
+    const paidThisMonth = Math.max(
+      paidThisMonthRes.rows[0]?.count || 0,
+      paidThisMonthMembersRes.rows[0]?.count || 0
+    );
+
+    res.json({
+      stats: {
+        signedUp,
+        activeMembers,
+        paidThisMonth,
+        fallingBack,
+        needsIntervention,
+      },
+      members,
+    });
+  } catch (err) {
+    console.error('CRM fetch error:', err);
+    res.status(500).json({ error: 'Failed to load CRM analytics.' });
+  }
+});
+
+router.delete('/members/:id', verifyAdminToken, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const existing = await pool.query('SELECT * FROM members WHERE id = $1', [id]);
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'Member not found.' });
+    }
+
+    const member = existing.rows[0];
+    const status = (member.subscription_status || '').toLowerCase();
+
+    if (status !== 'cancelled' && status !== 'unsubscribed') {
+      return res.status(400).json({
+        error: 'Only members who have unsubscribed/cancelled can be removed from the CRM.',
+      });
+    }
+
+    await pool.query('DELETE FROM members WHERE id = $1', [id]);
+    res.json({ message: 'Unsubscribed member removed from CRM.', removed: member });
+  } catch (err) {
+    console.error('Member removal error:', err);
+    res.status(500).json({ error: 'Failed to remove member.' });
+  }
+});
+
+router.patch('/members/:id/status', verifyAdminToken, async (req, res) => {
+  const { id } = req.params;
+  const { subscription_status } = req.body;
+
+  const allowed = ['pending', 'active', 'cancelled', 'failed', 'intervention'];
+  if (!allowed.includes(subscription_status)) {
+    return res.status(400).json({ error: `Status must be one of: ${allowed.join(', ')}` });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE members
+       SET subscription_status = $1, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2 RETURNING *`,
+      [subscription_status, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Member not found.' });
+    }
+
+    res.json({ message: 'Member status updated.', data: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update member status.' });
   }
 });
 

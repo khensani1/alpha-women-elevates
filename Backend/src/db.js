@@ -57,6 +57,35 @@ const initDb = async () => {
       email VARCHAR(255) UNIQUE NOT NULL,
       subscription_status VARCHAR(50) DEFAULT 'pending',
       payfast_token VARCHAR(100),
+      last_payment_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `;
+
+  const createProductsTable = `
+    CREATE TABLE IF NOT EXISTS products (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      description TEXT DEFAULT '',
+      category VARCHAR(100) DEFAULT 'Apparel',
+      price DECIMAL(10, 2) NOT NULL,
+      sizes TEXT DEFAULT '',
+      colors TEXT DEFAULT '',
+      image_url TEXT,
+      is_available BOOLEAN DEFAULT true,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `;
+
+  const createMembershipPaymentsTable = `
+    CREATE TABLE IF NOT EXISTS membership_payments (
+      id SERIAL PRIMARY KEY,
+      member_email VARCHAR(255) NOT NULL,
+      amount DECIMAL(10, 2) NOT NULL,
+      payment_status VARCHAR(50) DEFAULT 'COMPLETE',
+      payfast_payment_id VARCHAR(100),
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `;
@@ -95,12 +124,21 @@ const initDb = async () => {
     await pool.query(createOrderTable);
     await pool.query(createOrderItemTable);
     await pool.query(createMembersTable);
+    await pool.query(createProductsTable);
+    await pool.query(createMembershipPaymentsTable);
     await pool.query(createAdminTable);
     await pool.query(createGalleryTable);
     await pool.query(createNewsletterTable);
-    await pool.query(createEventsTable); // Installs the missing events table cleanly
+    await pool.query(createEventsTable);
     
     await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS date VARCHAR(100);`);
+    await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS price DECIMAL(10,2) DEFAULT 0;`);
+    await pool.query(`ALTER TABLE events ADD COLUMN IF NOT EXISTS event_type VARCHAR(50) DEFAULT 'free';`);
+    await pool.query(`ALTER TABLE members ADD COLUMN IF NOT EXISTS last_payment_at TIMESTAMP;`);
+    await pool.query(`ALTER TABLE members ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`);
+    await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS category VARCHAR(100) DEFAULT 'Apparel';`);
+    await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';`);
+    await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS is_available BOOLEAN DEFAULT true;`);
     console.log("📁 All relational PostgreSQL application data tables verified/created successfully.");
 
     const checkAdmin = await pool.query('SELECT * FROM admin_users LIMIT 1');

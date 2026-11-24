@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Image, Newspaper, LogOut, LayoutDashboard, ShoppingBag } from 'lucide-react';
+import { Image, Newspaper, LogOut, LayoutDashboard, ShoppingBag, Truck } from 'lucide-react';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -52,6 +52,14 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             >
               <ShoppingBag size={16} />
               Shop
+            </Link>
+
+            <Link
+              to="/admin/tracking"
+              className="flex items-center gap-3 px-4 py-3 text-xs font-bold uppercase tracking-wider text-pink-800 hover:text-pink-950 hover:bg-pink-200/60 transition-colors rounded"
+            >
+              <Truck size={16} />
+              Tracking
             </Link>
 
             <Link

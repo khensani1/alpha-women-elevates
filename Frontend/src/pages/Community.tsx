@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, ArrowRight, CheckCircle2, X, CreditCard, Sparkles, Loader2 } from 'lucide-react';
+import { MapPin, ArrowRight, CheckCircle2, X, CreditCard, Sparkles, Loader2, Mail, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface EventItem {
@@ -164,21 +164,41 @@ export function Community() {
           </div>
         </section>
 
-        {/* Dynamic Newsletters/Updates Section */}
-        {newsletters.length > 0 && (
-          <section className="mb-32">
-            <span className="section-label text-brand-indigo mb-12 block">02 // Latest Articles & Updates</span>
-            <div className="space-y-8 max-w-4xl">
+        {/* Newsletter Archives (moved from Profile) */}
+        <section className="mb-32">
+          <span className="section-label text-brand-indigo mb-4 block">02 // Newsletter Archives</span>
+          <p className="text-sm text-brand-muted font-serif italic mb-12 max-w-xl">
+            Official Alpha Women Elevates broadcasts and community digests — previously in the member portal, now gathered here.
+          </p>
+          {newsletters.length === 0 ? (
+            <p className="text-sm font-serif italic text-brand-muted">No published newsletters yet.</p>
+          ) : (
+            <div className="grid grid-cols-1 gap-6 max-w-4xl">
               {newsletters.map((article) => (
-                <div key={article.id} className="border-b border-brand-border pb-6">
-                  <h3 className="text-2xl font-serif text-brand-luxury mb-2">{article.title}</h3>
-                  <p className="text-xs text-brand-muted mb-3">{new Date(article.created_at).toLocaleDateString()}</p>
-                  <p className="text-sm font-sans text-brand-text/80 leading-relaxed whitespace-pre-wrap">{article.content}</p>
-                </div>
+                <article
+                  key={article.id}
+                  className="p-6 border border-brand-border bg-brand-luxury/5 space-y-3"
+                >
+                  <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-brand-muted">
+                    <span className="flex items-center gap-1">
+                      <Calendar size={12} />{' '}
+                      {article.created_at
+                        ? new Date(article.created_at).toLocaleDateString()
+                        : 'Recent'}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Mail size={12} /> Official Broadcast
+                    </span>
+                  </div>
+                  <h3 className="text-2xl font-serif text-brand-luxury">{article.title}</h3>
+                  <p className="text-sm font-sans text-brand-text/80 leading-relaxed whitespace-pre-wrap">
+                    {article.content}
+                  </p>
+                </article>
               ))}
             </div>
-          </section>
-        )}
+          )}
+        </section>
 
         {/* Dynamic Events Section */}
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-0 border-t border-l border-brand-border mb-32">
