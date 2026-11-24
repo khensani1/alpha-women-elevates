@@ -101,7 +101,7 @@ export function AdminTracking() {
           <button
             onClick={fetchOrders}
             className="self-start md:self-auto flex items-center gap-2 px-4 py-2 border border-purple-900/30 text-purple-950 rounded text-xs font-bold tracking-wider uppercase hover:bg-purple-900/10 transition-colors cursor-pointer"
-            style={{ backgroundColor: '#C4BCC7' }}
+            style={{ backgroundColor: '#E6E0F8' }}
           >
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
           </button>
@@ -120,7 +120,7 @@ export function AdminTracking() {
         ) : orders.length === 0 ? (
           <div
             className="border border-neutral-300 rounded p-12 text-center text-neutral-700 italic"
-            style={{ backgroundColor: '#C4BCC7' }}
+            style={{ backgroundColor: '#E6E0F8' }}
           >
             No orders to track yet.
           </div>
@@ -130,7 +130,7 @@ export function AdminTracking() {
               <div
                 key={order.id}
                 className="p-6 border border-neutral-300 rounded shadow-sm"
-                style={{ backgroundColor: '#C4BCC7' }}
+                style={{ backgroundColor: '#E6E0F8' }}
               >
                 <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
                   <div className="flex-1 space-y-3">

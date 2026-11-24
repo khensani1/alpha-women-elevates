@@ -123,7 +123,7 @@ export function AdminGallery() {
           {/* CONTROL BOX CREATION FORM */}
           <div 
             className="md:col-span-1 p-6 border border-neutral-300 rounded"
-            style={{ backgroundColor: '#C4BCC7' }}
+            style={{ backgroundColor: '#E6E0F8' }}
           >
             <h2 className="text-xs font-bold uppercase tracking-widest text-brand-indigo mb-4 flex items-center gap-2">
               <Plus size={14} /> Add Event Photograph
@@ -136,7 +136,7 @@ export function AdminGallery() {
                   value={title} 
                   onChange={(e) => setTitle(e.target.value)} 
                   className="w-full border border-neutral-400 p-2 text-xs rounded text-neutral-900 focus:outline-none focus:border-brand-indigo placeholder:text-neutral-500" 
-                  style={{ backgroundColor: '#C4BCC7' }}
+                  style={{ backgroundColor: '#E6E0F8' }}
                   placeholder="e.g. Strategy Gala" 
                 />
               </div>
@@ -147,7 +147,7 @@ export function AdminGallery() {
                   value={location} 
                   onChange={(e) => setLocation(e.target.value)} 
                   className="w-full border border-neutral-400 p-2 text-xs rounded text-neutral-900 focus:outline-none focus:border-brand-indigo placeholder:text-neutral-500" 
-                  style={{ backgroundColor: '#C4BCC7' }}
+                  style={{ backgroundColor: '#E6E0F8' }}
                   placeholder="e.g. Johannesburg" 
                 />
               </div>
@@ -158,7 +158,7 @@ export function AdminGallery() {
                   value={date} 
                   onChange={(e) => setDate(e.target.value)} 
                   className="w-full border border-neutral-400 p-2 text-xs rounded focus:outline-none focus:border-brand-indigo text-neutral-900" 
-                  style={{ backgroundColor: '#C4BCC7' }}
+                  style={{ backgroundColor: '#E6E0F8' }}
                 />
               </div>
               
@@ -168,7 +168,7 @@ export function AdminGallery() {
                 <div 
                   onClick={() => fileInputRef.current?.click()}
                   className="w-full border-2 border-dashed border-neutral-400 hover:border-brand-indigo p-4 text-center rounded cursor-pointer transition-colors group"
-                  style={{ backgroundColor: '#C4BCC7' }}
+                  style={{ backgroundColor: '#E6E0F8' }}
                 >
                   <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
                   <Upload size={20} className="mx-auto text-neutral-600 group-hover:text-brand-indigo mb-2" />
@@ -187,7 +187,7 @@ export function AdminGallery() {
           {/* ACTIVE LIVE DIRECTORY LISTING PANEL */}
           <div 
             className="md:col-span-2 p-6 border border-neutral-300 rounded"
-            style={{ backgroundColor: '#C4BCC7' }}
+            style={{ backgroundColor: '#E6E0F8' }}
           >
             <h2 className="text-xs font-bold uppercase tracking-widest text-neutral-700 mb-4">Active Directory Records ({dbItems.length})</h2>
             

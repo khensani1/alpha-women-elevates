@@ -39,7 +39,7 @@ export function Cart() {
     }
   }, [searchParams, clearCart]);
 
-  // Handle the external PayFast redirection checkout flow
+  // Handle PayPal redirection checkout flow
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
     if (cartItems.length === 0) return;
@@ -52,7 +52,7 @@ export function Cart() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/payments/payfast-checkout`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/payments/paypal-checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -73,7 +73,7 @@ export function Cart() {
       if (data.url) {
         window.location.href = data.url;
       } else {
-        alert('Payment initialization failed. Please try again.');
+        alert(data.error || 'Payment initialization failed. Please try again.');
         setLoading(false);
       }
     } catch (err) {

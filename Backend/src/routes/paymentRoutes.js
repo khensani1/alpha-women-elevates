@@ -1,143 +1,222 @@
-// routes/paymentRoutes.js
 import express from 'express';
-import crypto from 'crypto';
-import pool from '../db.js'; // Adjust this path to wherever your DB pool connection is
+import pool from '../db.js';
+import { createPayPalOrder, capturePayPalOrder } from '../utils/paypal.js';
 import {
   sendOrderNotificationToAdmin,
   sendOrderReceiptToCustomer,
+  sendPaymentSuccessEmail,
 } from '../utils/mailer.js';
 
 const router = express.Router();
 
-router.post('/payfast-checkout', (req, res) => {
+const frontendUrl = () => process.env.FRONTEND_URL || 'http://localhost:5173';
+const backendUrl = () => process.env.BACKEND_URL || 'http://localhost:5000';
+
+/**
+ * POST /api/payments/paypal-checkout
+ * Creates a PayPal order for shop cart checkout and returns the approval URL.
+ */
+router.post('/paypal-checkout', async (req, res) => {
   const { amount, item_name, email, cartItems } = req.body;
 
-  // Use environment variable for the frontend origin with localhost fallback
-  const clientUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  if (!email || !amount) {
+    return res.status(400).json({ error: 'Email and amount are required.' });
+  }
 
-  const payfastData = {
-    merchant_id: process.env.PAYFAST_MERCHANT_ID || '10000100', 
-    merchant_key: process.env.PAYFAST_MERCHANT_KEY || '46f0cd694581a', 
-    return_url: `${clientUrl}/cart?payment=success`, 
-    cancel_url: `${clientUrl}/cart?payment=cancelled`,
-    notify_url: process.env.PAYFAST_NOTIFY_URL || 'https://your-backend-domain.com/api/payments/payfast-notify', 
-    name_first: 'AWE',
-    name_last: 'Customer',
-    email_address: email || 'customer@example.com',
-    amount: parseFloat(amount).toFixed(2),
-    item_name: item_name || 'Alpha Women Elevates Order',
-    custom_str1: JSON.stringify(cartItems || [])
-  };
+  try {
+    const pending = await pool.query(
+      `INSERT INTO pending_checkouts (customer_email, amount, checkout_type, cart_items, metadata)
+       VALUES ($1, $2, 'shop', $3, $4)
+       RETURNING id`,
+      [
+        email.trim(),
+        parseFloat(amount).toFixed(2),
+        JSON.stringify(cartItems || []),
+        JSON.stringify({ item_name: item_name || 'Alpha Women Elevates Order' }),
+      ]
+    );
 
-  let paramString = '';
-  for (const key in payfastData) {
-    if (payfastData.hasOwnProperty(key)) {
-      paramString += `${key}=${encodeURIComponent(payfastData[key].toString().trim()).replace(/%20/g, '+')}&`;
+    const pendingId = pending.rows[0].id;
+
+    const { orderId, approveUrl } = await createPayPalOrder({
+      amount,
+      currency: process.env.PAYPAL_CURRENCY || 'ZAR',
+      description: item_name || 'Alpha Women Elevates Order',
+      customId: `shop:${pendingId}`,
+      payerEmail: email.trim(),
+      returnUrl: `${backendUrl()}/api/payments/paypal-return?pending_id=${pendingId}`,
+      cancelUrl: `${frontendUrl()}/cart?payment=cancelled`,
+    });
+
+    await pool.query(
+      `UPDATE pending_checkouts SET paypal_order_id = $1 WHERE id = $2`,
+      [orderId, pendingId]
+    );
+
+    if (!approveUrl) {
+      return res.status(500).json({ error: 'PayPal did not return an approval link.' });
     }
+
+    res.status(200).json({ url: approveUrl, orderId });
+  } catch (err) {
+    console.error('PayPal checkout init error:', err);
+    res.status(500).json({ error: err.message || 'Failed to start PayPal checkout.' });
   }
-  paramString = paramString.slice(0, -1); 
-
-  if (process.env.PAYFAST_PASSPHRASE) {
-    paramString += `&passphrase=${encodeURIComponent(process.env.PAYFAST_PASSPHRASE.trim()).replace(/%20/g, '+')}`;
-  }
-  const signature = crypto.createHash('md5').update(paramString).digest('hex');
-
-  // Toggle between Sandbox and Live production endpoint based on NODE_ENV or custom flag
-  const payfastHost = process.env.PAYFAST_ENV === 'production' 
-    ? 'https://www.payfast.co.za' 
-    : 'https://sandbox.payfast.co.za';
-
-  const payfastUrl = `${payfastHost}/eng/process?${paramString}&signature=${signature}`;
-
-  res.status(200).json({ url: payfastUrl });
 });
 
-export const handlePayFastCallback = async (req, res) => {
-  // PayFast sends transaction data in the request body
-  const pfData = req.body;
+/**
+ * GET /api/payments/paypal-return
+ * Captures payment after buyer approves on PayPal, then redirects to frontend.
+ */
+router.get('/paypal-return', async (req, res) => {
+  const token = req.query.token; // PayPal order ID
+  const pendingId = req.query.pending_id;
 
-  // 1. Verify that the payment status is COMPLETE
-  if (pfData.payment_status === 'COMPLETE') {
-    const customerEmail = pfData.email_address;
-    const totalAmount = pfData.amount_gross;
-    
-    // PayFast custom fields can pass data back to the callback. 
-    // We assume you stringified the cart items into `custom_str1` during checkout initialization.
-    let cartItems = [];
-    try {
-      if (pfData.custom_str1) {
-        cartItems = JSON.parse(pfData.custom_str1);
-      }
-    } catch (err) {
-      console.error("Failed to parse cart items from PayFast callback:", err);
+  try {
+    if (!token) {
+      return res.redirect(`${frontendUrl()}/cart?payment=cancelled`);
     }
 
-    let client;
+    const capture = await capturePayPalOrder(token);
+    const status = capture.status;
+
+    if (status !== 'COMPLETED') {
+      console.warn('PayPal capture not completed:', status);
+      return res.redirect(`${frontendUrl()}/cart?payment=cancelled`);
+    }
+
+    const pendingRes = await pool.query(
+      `SELECT * FROM pending_checkouts
+       WHERE paypal_order_id = $1 OR id = $2
+       LIMIT 1`,
+      [token, pendingId || 0]
+    );
+
+    if (pendingRes.rows.length === 0) {
+      console.error('No pending checkout found for PayPal order', token);
+      return res.redirect(`${frontendUrl()}/cart?payment=success`);
+    }
+
+    const pending = pendingRes.rows[0];
+
+    if (pending.checkout_type === 'membership') {
+      await finalizeMembershipPayment(pending, token);
+      await pool.query(`DELETE FROM pending_checkouts WHERE id = $1`, [pending.id]);
+      return res.redirect(
+        `${frontendUrl()}/community?payment=success`
+      );
+    }
+
+    // Shop order
+    await finalizeShopOrder(pending, token);
+    await pool.query(`DELETE FROM pending_checkouts WHERE id = $1`, [pending.id]);
+    return res.redirect(`${frontendUrl()}/cart?payment=success`);
+  } catch (err) {
+    console.error('PayPal return/capture error:', err);
+    return res.redirect(`${frontendUrl()}/cart?payment=cancelled`);
+  }
+});
+
+async function finalizeShopOrder(pending, paypalOrderId) {
+  const customerEmail = pending.customer_email;
+  const totalAmount = pending.amount;
+  let cartItems = pending.cart_items;
+
+  if (typeof cartItems === 'string') {
     try {
-      // Get a client from the pool to handle a multi-table database transaction
-      client = await pool.connect();
-      await client.query('BEGIN');
-
-      // 2. Insert the main order record into the 'orders' table
-      const orderQuery = `
-        INSERT INTO orders (customer_email, total_amount, status)
-        VALUES ($1, $2, 'Processing')
-        RETURNING id, customer_email, total_amount, status;
-      `;
-      const orderResult = await client.query(orderQuery, [customerEmail, totalAmount]);
-      const newOrder = orderResult.rows[0];
-
-      // 3. Insert each individual cart item into the 'order_items' table
-      if (cartItems.length > 0) {
-        const itemQuery = `
-          INSERT INTO order_items (order_id, product_name, quantity, size, color, price)
-          VALUES ($1, $2, $3, $4, $5, $6);
-        `;
-        
-        for (const item of cartItems) {
-          await client.query(itemQuery, [
-            newOrder.id,
-            item.name,       // Product name
-            item.quantity,   // Quantity
-            item.size,       // e.g., 'M', 'L', 'XL'
-            item.color,      // e.g., 'Black', 'White'
-            item.price       // Single item price
-          ]);
-        }
-      }
-
-      // Commit the database transaction if both inserts pass smoothly
-      await client.query('COMMIT');
-      console.log(`🎉 Order #${newOrder.id} successfully saved to DB!`);
-
-      // 4. Notify admin + customer (receipt includes unsubscribe link)
-      const emailItems = cartItems.map((item) => ({
-        product_name: item.product_name || item.name,
-        quantity: item.quantity,
-        size: item.size,
-        color: item.color,
-        price: item.price,
-      }));
-
-      try {
-        await sendOrderNotificationToAdmin(newOrder, emailItems);
-        await sendOrderReceiptToCustomer(newOrder, emailItems);
-        console.log(`✉️ Payment emails sent for Order #${newOrder.id}`);
-      } catch (emailErr) {
-        console.error('Order email dispatch failed:', emailErr);
-      }
-
-    } catch (dbError) {
-      if (client) await client.query('ROLLBACK');
-      console.error("❌ Transaction Error. Failed to process order payload:", dbError);
-    } finally {
-      if (client) client.release();
+      cartItems = JSON.parse(cartItems);
+    } catch {
+      cartItems = [];
     }
   }
 
-  // PayFast needs a clean 200 OK status response to acknowledge you received the webhook data
-  return res.status(200).send('OK');
-};
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
 
+    const orderResult = await client.query(
+      `INSERT INTO orders (customer_email, total_amount, status)
+       VALUES ($1, $2, 'Processing')
+       RETURNING id, customer_email, total_amount, status`,
+      [customerEmail, totalAmount]
+    );
+    const newOrder = orderResult.rows[0];
+
+    if (Array.isArray(cartItems) && cartItems.length > 0) {
+      for (const item of cartItems) {
+        await client.query(
+          `INSERT INTO order_items (order_id, product_name, quantity, size, color, price)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [
+            newOrder.id,
+            item.name || item.product_name,
+            item.quantity,
+            item.size || 'N/A',
+            item.color || 'N/A',
+            item.price,
+          ]
+        );
+      }
+    }
+
+    await client.query('COMMIT');
+
+    const emailItems = (cartItems || []).map((item) => ({
+      product_name: item.product_name || item.name,
+      quantity: item.quantity,
+      size: item.size,
+      color: item.color,
+      price: item.price,
+    }));
+
+    try {
+      await sendOrderNotificationToAdmin(newOrder, emailItems);
+      await sendOrderReceiptToCustomer(newOrder, emailItems);
+    } catch (emailErr) {
+      console.error('Order email dispatch failed:', emailErr);
+    }
+
+    console.log(`🎉 Shop order #${newOrder.id} paid via PayPal (${paypalOrderId})`);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+async function finalizeMembershipPayment(pending, paypalOrderId) {
+  const email = pending.customer_email;
+  const amount = pending.amount || 100;
+
+  await pool.query(
+    `UPDATE members
+     SET subscription_status = 'active',
+         payfast_token = COALESCE($1, payfast_token),
+         last_payment_at = CURRENT_TIMESTAMP,
+         updated_at = CURRENT_TIMESTAMP
+     WHERE LOWER(email) = LOWER($2)`,
+    [paypalOrderId, email]
+  );
+
+  await pool.query(
+    `INSERT INTO membership_payments (member_email, amount, payment_status, payfast_payment_id)
+     VALUES ($1, $2, 'COMPLETE', $3)`,
+    [email, amount, paypalOrderId]
+  );
+
+  try {
+    await sendPaymentSuccessEmail({
+      to: email,
+      amount,
+      paymentType: 'Monthly Membership',
+      reference: paypalOrderId,
+    });
+  } catch (emailErr) {
+    console.error('Membership payment email failed:', emailErr);
+  }
+
+  console.log(`✅ Member ${email} activated via PayPal (${paypalOrderId})`);
+}
 
 export default router;

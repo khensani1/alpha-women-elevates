@@ -148,7 +148,7 @@ const handleCreateEvent = async (e: React.FormEvent) => {
           <div className="space-y-6">
             <div 
               className="p-6 border border-neutral-300 rounded"
-              style={{ backgroundColor: '#C4BCC7' }}
+              style={{ backgroundColor: '#E6E0F8' }}
             >
               <h2 className="text-xs font-bold uppercase tracking-widest text-brand-indigo mb-4 flex items-center gap-2">
                 <Newspaper size={14} /> Publish News/Updates
@@ -161,7 +161,7 @@ const handleCreateEvent = async (e: React.FormEvent) => {
                     value={newsTitle} 
                     onChange={(e) => setNewsTitle(e.target.value)} 
                     className="w-full border border-neutral-400 p-2 text-xs rounded text-neutral-900 focus:outline-none focus:border-brand-indigo placeholder:text-neutral-500" 
-                    style={{ backgroundColor: '#C4BCC7' }}
+                    style={{ backgroundColor: '#E6E0F8' }}
                     placeholder="e.g. Scaling Your Business in 2026" 
                   />
                 </div>
@@ -172,7 +172,7 @@ const handleCreateEvent = async (e: React.FormEvent) => {
                     value={newsContent} 
                     onChange={(e) => setNewsContent(e.target.value)} 
                     className="w-full border border-neutral-400 p-2 text-xs rounded text-neutral-900 focus:outline-none focus:border-brand-indigo resize-none placeholder:text-neutral-500" 
-                    style={{ backgroundColor: '#C4BCC7' }}
+                    style={{ backgroundColor: '#E6E0F8' }}
                     placeholder="Write your newsletter insights here..." 
                   />
                 </div>
@@ -184,7 +184,7 @@ const handleCreateEvent = async (e: React.FormEvent) => {
 
             <div 
               className="p-6 border border-neutral-300 rounded"
-              style={{ backgroundColor: '#C4BCC7' }}
+              style={{ backgroundColor: '#E6E0F8' }}
             >
               <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-700 mb-4">Published Archives</h3>
               <div className="divide-y divide-neutral-300 text-xs">
@@ -208,7 +208,7 @@ const handleCreateEvent = async (e: React.FormEvent) => {
           <div className="space-y-6">
             <div 
               className="p-6 border border-neutral-300 rounded"
-              style={{ backgroundColor: '#C4BCC7' }}
+              style={{ backgroundColor: '#E6E0F8' }}
             >
               <h2 className="text-xs font-bold uppercase tracking-widest text-brand-sunset mb-4 flex items-center gap-2">
                 <Calendar size={14} /> Schedule Upcoming Event
@@ -221,7 +221,7 @@ const handleCreateEvent = async (e: React.FormEvent) => {
                     value={eventTitle} 
                     onChange={(e) => setEventTitle(e.target.value)} 
                     className="w-full border border-neutral-400 p-2 text-xs rounded text-neutral-900 focus:outline-none focus:border-brand-indigo placeholder:text-neutral-500" 
-                    style={{ backgroundColor: '#C4BCC7' }}
+                    style={{ backgroundColor: '#E6E0F8' }}
                     placeholder="e.g. Annual Summit Gala" 
                   />
                 </div>
@@ -232,7 +232,7 @@ const handleCreateEvent = async (e: React.FormEvent) => {
                     value={eventLocation} 
                     onChange={(e) => setEventLocation(e.target.value)} 
                     className="w-full border border-neutral-400 p-2 text-xs rounded text-neutral-900 focus:outline-none focus:border-brand-indigo placeholder:text-neutral-500" 
-                    style={{ backgroundColor: '#C4BCC7' }}
+                    style={{ backgroundColor: '#E6E0F8' }}
                     placeholder="e.g. Johannesburg, SA or Zoom" 
                   />
                 </div>
@@ -244,7 +244,7 @@ const handleCreateEvent = async (e: React.FormEvent) => {
                       value={eventDate} 
                       onChange={(e) => setEventDate(e.target.value)} 
                       className="w-full border border-neutral-400 p-2 text-xs rounded text-neutral-900 focus:outline-none focus:border-brand-indigo" 
-                      style={{ backgroundColor: '#C4BCC7' }}
+                      style={{ backgroundColor: '#E6E0F8' }}
                     />
                   </div>
                   <div>
@@ -256,7 +256,7 @@ const handleCreateEvent = async (e: React.FormEvent) => {
                       value={eventPrice} 
                       onChange={(e) => setEventPrice(e.target.value)} 
                       className="w-full border border-neutral-400 p-2 text-xs rounded text-neutral-900 focus:outline-none focus:border-brand-indigo placeholder:text-neutral-500" 
-                      style={{ backgroundColor: '#C4BCC7' }}
+                      style={{ backgroundColor: '#E6E0F8' }}
                       placeholder="0 for Free" 
                     />
                   </div>
@@ -269,7 +269,7 @@ const handleCreateEvent = async (e: React.FormEvent) => {
 
             <div 
               className="p-6 border border-neutral-300 rounded"
-              style={{ backgroundColor: '#C4BCC7' }}
+              style={{ backgroundColor: '#E6E0F8' }}
             >
               <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-700 mb-4">Live Planned Timelines</h3>
               <div className="divide-y divide-neutral-300 text-xs">

@@ -90,6 +90,19 @@ const initDb = async () => {
     );
   `;
 
+  const createPendingCheckoutsTable = `
+    CREATE TABLE IF NOT EXISTS pending_checkouts (
+      id SERIAL PRIMARY KEY,
+      paypal_order_id VARCHAR(64),
+      customer_email VARCHAR(255) NOT NULL,
+      amount DECIMAL(10, 2) NOT NULL,
+      checkout_type VARCHAR(50) DEFAULT 'shop',
+      cart_items JSONB DEFAULT '[]'::jsonb,
+      metadata JSONB DEFAULT '{}'::jsonb,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `;
+
   const createAdminTable = `
     CREATE TABLE IF NOT EXISTS admin_users (
       id SERIAL PRIMARY KEY,
@@ -126,6 +139,7 @@ const initDb = async () => {
     await pool.query(createMembersTable);
     await pool.query(createProductsTable);
     await pool.query(createMembershipPaymentsTable);
+    await pool.query(createPendingCheckoutsTable);
     await pool.query(createAdminTable);
     await pool.query(createGalleryTable);
     await pool.query(createNewsletterTable);

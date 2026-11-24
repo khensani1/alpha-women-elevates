@@ -40,7 +40,7 @@ export function Services() {
     }
   ];
 
-  // PayFast registration initialization form logic mirrored from the Home page
+  // PayPal registration initialization form logic mirrored from the Home page
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -167,7 +167,7 @@ export function Services() {
                 </div>
 
                 <div className="bg-brand-bg-accent/5 p-4 border border-brand-border rounded text-[11px] text-brand-muted leading-relaxed">
-                  🔒 <strong>Secure External Checkout:</strong> To fully safeguard your payment security, clicking below redirects you directly to PayFast's official, POPIA-compliant transaction processor to verify your subscription setup.
+                  🔒 <strong>Secure External Checkout:</strong> To fully safeguard your payment security, clicking below redirects you directly to PayPal&apos;s official, encrypted checkout to verify your subscription setup.
                 </div>
 
                 <button type="submit" disabled={isSubmitting} className="w-full bg-brand-luxury text-white hover:bg-brand-indigo p-4 text-[10px] font-bold uppercase tracking-[0.2em] transition-colors disabled:opacity-50 cursor-pointer">

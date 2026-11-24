@@ -213,7 +213,7 @@ export function AdminShop() {
           <div className="lg:col-span-1 space-y-6">
             <div
               className="p-6 border border-neutral-300 rounded shadow-sm"
-              style={{ backgroundColor: '#C4BCC7' }}
+              style={{ backgroundColor: '#E6E0F8' }}
             >
               <h2 className="text-xs font-bold uppercase tracking-widest text-purple-950 mb-4 flex items-center gap-2">
                 <PlusCircle size={14} /> Post New Merchandise
@@ -229,7 +229,7 @@ export function AdminShop() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="w-full border border-neutral-400 p-2 text-xs rounded text-neutral-900 focus:outline-none focus:border-purple-900 placeholder:text-neutral-500"
-                    style={{ backgroundColor: '#C4BCC7' }}
+                    style={{ backgroundColor: '#E6E0F8' }}
                     placeholder="e.g. Ambassador Hoodie"
                   />
                 </div>
@@ -242,7 +242,7 @@ export function AdminShop() {
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
                     className="w-full border border-neutral-400 p-2 text-xs rounded text-neutral-900 focus:outline-none focus:border-purple-900"
-                    style={{ backgroundColor: '#C4BCC7' }}
+                    style={{ backgroundColor: '#E6E0F8' }}
                   >
                     {categories.map((cat) => (
                       <option key={cat} value={cat}>
@@ -263,7 +263,7 @@ export function AdminShop() {
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
                     className="w-full border border-neutral-400 p-2 text-xs rounded text-neutral-900 focus:outline-none focus:border-purple-900 placeholder:text-neutral-500"
-                    style={{ backgroundColor: '#C4BCC7' }}
+                    style={{ backgroundColor: '#E6E0F8' }}
                     placeholder="299.00"
                   />
                 </div>
@@ -277,7 +277,7 @@ export function AdminShop() {
                     onChange={(e) => setDescription(e.target.value)}
                     rows={2}
                     className="w-full border border-neutral-400 p-2 text-xs rounded text-neutral-900 focus:outline-none focus:border-purple-900"
-                    style={{ backgroundColor: '#C4BCC7' }}
+                    style={{ backgroundColor: '#E6E0F8' }}
                     placeholder="Optional"
                   />
                 </div>
@@ -291,7 +291,7 @@ export function AdminShop() {
                     value={image}
                     onChange={(e) => setImage(e.target.value)}
                     className="w-full border border-neutral-400 p-2 text-xs rounded text-neutral-900 focus:outline-none focus:border-purple-900 placeholder:text-neutral-500"
-                    style={{ backgroundColor: '#C4BCC7' }}
+                    style={{ backgroundColor: '#E6E0F8' }}
                     placeholder="https://images.unsplash.com/..."
                   />
                 </div>
@@ -326,7 +326,7 @@ export function AdminShop() {
           <div className="lg:col-span-2 space-y-6">
             <div
               className="p-6 border border-neutral-300 rounded shadow-sm"
-              style={{ backgroundColor: '#C4BCC7' }}
+              style={{ backgroundColor: '#E6E0F8' }}
             >
               <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-800 mb-4 flex items-center justify-between">
                 <span>Storefront Items</span>
@@ -429,7 +429,7 @@ export function AdminShop() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
             <div
               className="w-full max-w-md p-6 border border-neutral-300 rounded shadow-xl relative"
-              style={{ backgroundColor: '#C4BCC7' }}
+              style={{ backgroundColor: '#E6E0F8' }}
             >
               <button
                 onClick={() => setEditing(null)}
@@ -445,14 +445,14 @@ export function AdminShop() {
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   className="w-full border border-neutral-400 p-2 text-xs rounded"
-                  style={{ backgroundColor: '#C4BCC7' }}
+                  style={{ backgroundColor: '#E6E0F8' }}
                   placeholder="Name"
                 />
                 <select
                   value={editCategory}
                   onChange={(e) => setEditCategory(e.target.value)}
                   className="w-full border border-neutral-400 p-2 text-xs rounded"
-                  style={{ backgroundColor: '#C4BCC7' }}
+                  style={{ backgroundColor: '#E6E0F8' }}
                 >
                   {categories.map((cat) => (
                     <option key={cat} value={cat}>
@@ -466,14 +466,14 @@ export function AdminShop() {
                   value={editPrice}
                   onChange={(e) => setEditPrice(e.target.value)}
                   className="w-full border border-neutral-400 p-2 text-xs rounded"
-                  style={{ backgroundColor: '#C4BCC7' }}
+                  style={{ backgroundColor: '#E6E0F8' }}
                   placeholder="Price"
                 />
                 <input
                   value={editImage}
                   onChange={(e) => setEditImage(e.target.value)}
                   className="w-full border border-neutral-400 p-2 text-xs rounded"
-                  style={{ backgroundColor: '#C4BCC7' }}
+                  style={{ backgroundColor: '#E6E0F8' }}
                   placeholder="Image URL"
                 />
                 <textarea
@@ -481,7 +481,7 @@ export function AdminShop() {
                   onChange={(e) => setEditDescription(e.target.value)}
                   rows={2}
                   className="w-full border border-neutral-400 p-2 text-xs rounded"
-                  style={{ backgroundColor: '#C4BCC7' }}
+                  style={{ backgroundColor: '#E6E0F8' }}
                   placeholder="Description"
                 />
                 <button

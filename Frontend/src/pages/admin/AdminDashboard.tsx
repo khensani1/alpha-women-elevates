@@ -198,7 +198,7 @@ export function AdminDashboard() {
               fetchCrm();
             }}
             className="self-start md:self-auto flex items-center gap-2 px-4 py-2 border border-purple-900/30 text-purple-950 rounded text-xs font-bold tracking-wider uppercase hover:bg-purple-900/10 transition-colors cursor-pointer"
-            style={{ backgroundColor: '#C4BCC7' }}
+            style={{ backgroundColor: '#E6E0F8' }}
           >
             <RefreshCw size={14} className={loading || crmLoading ? 'animate-spin' : ''} /> Sync
             Workspace
@@ -253,7 +253,7 @@ export function AdminDashboard() {
               <div
                 key={card.label}
                 className="p-5 border border-neutral-300 rounded shadow-sm"
-                style={{ backgroundColor: '#C4BCC7' }}
+                style={{ backgroundColor: '#E6E0F8' }}
               >
                 <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 mb-2 flex items-center gap-2">
                   {card.icon} {card.label}
@@ -269,7 +269,7 @@ export function AdminDashboard() {
           {/* Unsubscribed members removable list */}
           <div
             className="p-6 border border-neutral-300 rounded shadow-sm"
-            style={{ backgroundColor: '#C4BCC7' }}
+            style={{ backgroundColor: '#E6E0F8' }}
           >
             <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-800 mb-3">
               Unsubscribed members (removable)
@@ -313,7 +313,7 @@ export function AdminDashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
           <div
             className="p-6 border border-neutral-300 rounded shadow-sm flex flex-col justify-between"
-            style={{ backgroundColor: '#C4BCC7' }}
+            style={{ backgroundColor: '#E6E0F8' }}
           >
             <p className="text-[10px] font-bold uppercase tracking-widest text-neutral-700 mb-2 flex items-center gap-2">
               <Package size={14} /> Total Received
@@ -323,7 +323,7 @@ export function AdminDashboard() {
 
           <div
             className="p-6 border border-neutral-300 rounded shadow-sm flex flex-col justify-between"
-            style={{ backgroundColor: '#C4BCC7' }}
+            style={{ backgroundColor: '#E6E0F8' }}
           >
             <p className="text-[10px] font-bold uppercase tracking-widest text-amber-800 mb-2 flex items-center gap-2">
               <Clock size={14} /> Pending Fulfillment
@@ -333,7 +333,7 @@ export function AdminDashboard() {
 
           <div
             className="p-6 border border-neutral-300 rounded shadow-sm flex flex-col justify-between"
-            style={{ backgroundColor: '#C4BCC7' }}
+            style={{ backgroundColor: '#E6E0F8' }}
           >
             <p className="text-[10px] font-bold uppercase tracking-widest text-purple-900 mb-2 flex items-center gap-2">
               <CheckCircle2 size={14} /> Total Volume
@@ -354,7 +354,7 @@ export function AdminDashboard() {
                   ? 'bg-purple-950 text-white border-purple-950'
                   : 'text-neutral-800 border-neutral-400 hover:border-purple-900'
               }`}
-              style={filterStatus !== status ? { backgroundColor: '#C4BCC7' } : {}}
+              style={filterStatus !== status ? { backgroundColor: '#E6E0F8' } : {}}
             >
               {status}
             </button>
@@ -374,7 +374,7 @@ export function AdminDashboard() {
         ) : filteredOrders.length === 0 ? (
           <div
             className="border border-neutral-300 rounded p-12 text-center text-neutral-700 italic"
-            style={{ backgroundColor: '#C4BCC7' }}
+            style={{ backgroundColor: '#E6E0F8' }}
           >
             No order logs available matching criteria.
           </div>
@@ -384,7 +384,7 @@ export function AdminDashboard() {
               <div
                 key={order.id}
                 className="p-6 border border-neutral-300 rounded shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6"
-                style={{ backgroundColor: '#C4BCC7' }}
+                style={{ backgroundColor: '#E6E0F8' }}
               >
                 <div className="flex-1 space-y-3">
                   <div className="flex flex-wrap items-center gap-3">

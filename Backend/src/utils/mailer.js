@@ -213,7 +213,7 @@ export const sendUnsubscribeRequestToAdmin = async ({ email, name, surname }) =>
             <li><strong>Email:</strong> ${email}</li>
             <li><strong>Requested at:</strong> ${new Date().toLocaleString('en-ZA')}</li>
           </ul>
-          <p>Please cancel their PayFast recurring billing and remove them from the active members list in the admin CRM when ready.</p>
+          <p>Please cancel their PayPal billing/subscription if needed and remove them from the active members list in the admin CRM when ready.</p>
         </div>
       `,
     });
