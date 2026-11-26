@@ -116,7 +116,7 @@ export function Community() {
     },
   ];
 
-  if (loading) return <p className="text-center py-20 font-serif italic text-brand-text/60">Syncing Digest feeds...</p>;
+  if (loading) return <p className="text-center py-20 font-serif italic text-brand-text/85">Syncing Digest feeds...</p>;
 
   return (
     <div className="bg-brand-bg min-h-screen pt-32 pb-24 px-4 overflow-hidden text-brand-text">
@@ -129,7 +129,7 @@ export function Community() {
               animate={{ opacity: 1, y: 0 }}
               className="editorial-title text-brand-text"
             >
-              The <span className="italic opacity-60">Digest.</span>
+              The <span className="italic opacity-80">Digest.</span>
             </motion.h1>
           </div>
           <p className="text-lg text-brand-text opacity-70 font-serif italic max-w-sm">
@@ -157,7 +157,7 @@ export function Community() {
                 <div>
                   <h3 className="text-2xl font-serif mb-2 text-brand-text">{item.name}</h3>
                   <span className="text-[10px] font-bold text-brand-sunset uppercase tracking-[0.1em] block mb-4">{item.role}</span>
-                  <p className="text-brand-text/60 italic font-serif leading-relaxed">"{item.story}"</p>
+                  <p className="text-brand-text/85 italic font-serif leading-relaxed">"{item.story}"</p>
                 </div>
               </motion.div>
             ))}
@@ -205,7 +205,7 @@ export function Community() {
           <div className="p-12 border-r border-b border-brand-border bg-sunset-gradient text-brand-text">
             <span className="section-label text-brand-text/50 mb-10 block">03 // Calendar</span>
             <h2 className="text-4xl font-serif mb-8 text-brand-text">Upcoming Events</h2>
-            <p className="text-brand-text/60 mb-12 font-light leading-relaxed font-serif italic">
+            <p className="text-brand-text/85 mb-12 font-light leading-relaxed font-serif italic">
               Exclusive gatherings designed for strategic growth and networking.
             </p>
             <Link to="/signup" className="text-[10px] font-bold uppercase tracking-[0.2em] underline decoration-brand-text/30 underline-offset-8 hover:decoration-brand-text transition-all">

@@ -62,7 +62,7 @@ export function Home() {
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
             <span className="section-label mb-8 block text-brand-indigo">Alpha Women Elevates // Est. 2023</span>
             <h1 className="editorial-title mb-10 text-brand-text">
-              Women<br /><span className="italic opacity-60">Elevates.</span>
+              Women<br /><span className="italic opacity-80">Elevates.</span>
             </h1>
             <p className="text-xl text-brand-text opacity-70 mb-12 leading-relaxed font-serif italic max-w-lg">
               Empowering a community of forward-thinking women through mentorship, curated events, and collective commerce.

@@ -14,7 +14,7 @@ export function About() {
           >
             Our <span className="text-brand-sunset italic">Story</span>
           </motion.h1>
-          <p className="text-xl text-brand-text/60 max-w-2xl mx-auto font-serif italic leading-relaxed">
+          <p className="text-xl text-brand-text/85 max-w-2xl mx-auto font-serif italic leading-relaxed">
             Alpha Women Elevates is a local initiative born from the vision of 
             empowering women through structured community, mentorship, and support.
           </p>
@@ -35,7 +35,7 @@ export function About() {
             >
               <Target className="text-brand-indigo mb-6" size={40} />
               <h2 className="text-3xl font-serif mb-4 text-brand-text">Our Mission</h2>
-              <p className="text-brand-text/70 leading-relaxed font-light" >
+              <p className="text-brand-text/90 leading-relaxed font-light" >
                 To create an inclusive ecosystem where women can access the resources, 
                 networks, and knowledge necessary to elevate their personal and professional 
                 lives. We strive to break barriers and foster a culture of excellence.
@@ -50,7 +50,7 @@ export function About() {
             >
               <Eye className="text-brand-sunset mb-6" size={40} />
               <h2 className="text-3xl font-serif mb-4 text-brand-text">Our Vision</h2>
-              <p className="text-brand-text/70 leading-relaxed font-light">
+              <p className="text-brand-text/90 leading-relaxed font-light">
                 To become the leading global digital platform for women's development, 
                 recognized for our impact on community building, business growth, 
                 and leadership evolution.
@@ -86,7 +86,7 @@ export function About() {
                   {value.icon}
                 </div>
                 <h3 className="text-2xl font-serif mb-4 text-brand-text">{value.title}</h3>
-                <p className="text-brand-text/60 font-light italic">{value.desc}</p>
+                <p className="text-brand-text/85 font-light italic">{value.desc}</p>
               </motion.div>
             ))}
           </div>

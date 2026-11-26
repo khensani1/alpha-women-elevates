@@ -5,28 +5,33 @@
   --font-sans: "Inter", "Helvetica Neue", Arial, sans-serif;
   
   --color-brand-bg: #FFFFFF;
-  --color-brand-bg-accent: #3B1E54;
-  --color-brand-text: #CC2B5E;
-  --color-brand-muted: #4B0082;
-  --color-brand-border: #FFFFFF;
-  --color-brand-indigo: #4B0082;
-  --color-brand-sunset: #CC2B5E;
-  --color-brand-luxury: #3B1E54;
+  --color-brand-bg-accent: #2A1538;
+  --color-brand-text: #1A1024;
+  --color-brand-muted: #3D2A4F;
+  --color-brand-border: #C9B8D6;
+  --color-brand-indigo: #2A0A4A;
+  --color-brand-sunset: #8B153F;
+  --color-brand-luxury: #1A0F24;
 }
 
 @layer base {
   body {
     @apply bg-brand-bg text-brand-text font-sans antialiased;
+    color: #1A1024;
+  }
+
+  h1, h2, h3, h4, h5, h6, p, span, li, a, label {
+    color: inherit;
   }
 }
 
 @layer components {
   .editorial-title {
-    @apply font-serif text-5xl md:text-8xl leading-[0.95] tracking-[-0.04em] font-normal;
+    @apply font-serif text-5xl md:text-8xl leading-[0.95] tracking-[-0.04em] font-normal text-brand-text;
   }
   
   .section-label {
-    @apply text-[10px] uppercase tracking-[0.2em] text-brand-muted font-bold;
+    @apply text-[10px] uppercase tracking-[0.2em] text-brand-indigo font-bold;
   }
   
   .cta-border {

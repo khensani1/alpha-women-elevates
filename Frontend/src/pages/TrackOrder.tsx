@@ -61,7 +61,7 @@ export function TrackOrder() {
     <main className="bg-brand-bg text-brand-text min-h-screen py-20 px-4">
       <div className="max-w-4xl mx-auto">
         <h1 className="font-serif text-4xl md:text-6xl mb-4 text-brand-luxury">Track Order</h1>
-        <p className="font-serif italic text-brand-text/60 mb-12">Enter the email address you used during purchase to review package transit histories.</p>
+        <p className="font-serif italic text-brand-text/85 mb-12">Enter the email address you used during purchase to review package transit histories.</p>
 
         {/* Tracking Lookup Box */}
         <form onSubmit={handleTrack} className="flex flex-col sm:flex-row gap-4 mb-16 max-w-xl">

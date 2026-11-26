@@ -11,7 +11,7 @@ export function Privacy() {
           <h1 className="text-4xl font-serif text-brand-text mb-8">Privacy Policy <span className="text-brand-sunset">(POPIA)</span></h1>
           <p className="section-label mb-12">Last Updated: May 11, 2026</p>
           
-          <div className="max-w-none space-y-8 text-brand-text/70 leading-relaxed font-light font-serif italic">
+          <div className="max-w-none space-y-8 text-brand-text/90 leading-relaxed font-light font-serif italic">
             <section>
               <h2 className="text-2xl font-serif text-brand-indigo mb-4 uppercase tracking-tighter">1. Introduction</h2>
               <p>
@@ -25,10 +25,10 @@ export function Privacy() {
               <h2 className="text-2xl font-serif text-brand-indigo mb-4 uppercase tracking-tighter">2. Information We Collect</h2>
               <p>We collect personal information that you provide to us directly, including:</p>
               <ul className="list-disc pl-6 space-y-2 text-brand-sunset">
-                <li><span className="text-brand-text/70">Full Name and Contact Details (Email, Phone)</span></li>
-                <li><span className="text-brand-text/70">Location and Demographic Information</span></li>
-                <li><span className="text-brand-text/70">Payment Information for Membership Subscriptions</span></li>
-                <li><span className="text-brand-text/70">Business Details for Spotlight features</span></li>
+                <li><span className="text-brand-text/90">Full Name and Contact Details (Email, Phone)</span></li>
+                <li><span className="text-brand-text/90">Location and Demographic Information</span></li>
+                <li><span className="text-brand-text/90">Payment Information for Membership Subscriptions</span></li>
+                <li><span className="text-brand-text/90">Business Details for Spotlight features</span></li>
               </ul>
             </section>
 
@@ -36,10 +36,10 @@ export function Privacy() {
               <h2 className="text-2xl font-serif text-brand-indigo mb-4 uppercase tracking-tighter">3. Use of Information</h2>
               <p>Your data is used solely for:</p>
               <ul className="list-disc pl-6 space-y-2 text-brand-sunset">
-                <li><span className="text-brand-text/70">Managing your membership and subscriptions</span></li>
-                <li><span className="text-brand-text/70">Facilitating community engagement and events</span></li>
-                <li><span className="text-brand-text/70">Processing merchandise orders</span></li>
-                <li><span className="text-brand-text/70">Communicating critical updates and empowerment resources</span></li>
+                <li><span className="text-brand-text/90">Managing your membership and subscriptions</span></li>
+                <li><span className="text-brand-text/90">Facilitating community engagement and events</span></li>
+                <li><span className="text-brand-text/90">Processing merchandise orders</span></li>
+                <li><span className="text-brand-text/90">Communicating critical updates and empowerment resources</span></li>
               </ul>
             </section>
 

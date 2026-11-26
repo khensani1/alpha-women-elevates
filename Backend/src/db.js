@@ -159,15 +159,40 @@ const initDb = async () => {
     await pool.query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS is_available BOOLEAN DEFAULT true;`);
     console.log("📁 All relational PostgreSQL application data tables verified/created successfully.");
 
-    const checkAdmin = await pool.query('SELECT * FROM admin_users LIMIT 1');
-    if (checkAdmin.rows.length === 0) {
-      const defaultEmail = 'admin@awe.co.za';
-      const hashedPassword = await bcrypt.hash('secure123', 10);
+    // Migrate legacy "admin" role → marketing (content team)
+    await pool.query(
+      `UPDATE admin_users SET role = 'marketing' WHERE role = 'admin' OR role IS NULL OR role = ''`
+    );
+
+    const marketingEmail = process.env.MARKETING_ADMIN_EMAIL || 'admin@awe.co.za';
+    const marketingPass = process.env.MARKETING_ADMIN_PASSWORD || 'secure123';
+    const superEmail = process.env.SUPER_ADMIN_EMAIL || 'superadmin@awe.co.za';
+    const superPass = process.env.SUPER_ADMIN_PASSWORD || 'supersecure123';
+
+    const marketingExists = await pool.query('SELECT id FROM admin_users WHERE email = $1', [marketingEmail]);
+    if (marketingExists.rows.length === 0) {
+      const hashed = await bcrypt.hash(marketingPass, 10);
       await pool.query(
-        'INSERT INTO admin_users (email, password) VALUES ($1, $2)',
-        [defaultEmail, hashedPassword]
+        'INSERT INTO admin_users (email, password, role) VALUES ($1, $2, $3)',
+        [marketingEmail, hashed, 'marketing']
       );
-      console.log(`👤 Seeding Complete: Default admin account initialized (${defaultEmail})`);
+      console.log(`👤 Marketing admin seeded (${marketingEmail})`);
+    } else {
+      await pool.query(`UPDATE admin_users SET role = 'marketing' WHERE email = $1 AND role <> 'super_admin'`, [
+        marketingEmail,
+      ]);
+    }
+
+    const superExists = await pool.query('SELECT id FROM admin_users WHERE email = $1', [superEmail]);
+    if (superExists.rows.length === 0) {
+      const hashed = await bcrypt.hash(superPass, 10);
+      await pool.query(
+        'INSERT INTO admin_users (email, password, role) VALUES ($1, $2, $3)',
+        [superEmail, hashed, 'super_admin']
+      );
+      console.log(`👑 Super admin seeded (${superEmail})`);
+    } else {
+      await pool.query(`UPDATE admin_users SET role = 'super_admin' WHERE email = $1`, [superEmail]);
     }
   } catch (err) {
     console.error("❌ Error initializing database tables:", err);

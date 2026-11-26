@@ -13,7 +13,6 @@ export function AdminLogin() {
     setLoading(true);
 
     try {
-      // 📡 Hit your real Node.js backend authentication endpoint
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/login`, {
         method: 'POST',
         headers: {
@@ -28,15 +27,18 @@ export function AdminLogin() {
         throw new Error(result.error || 'Invalid security authorization credentials.');
       }
 
-      // 🔑 Save the real backend JWT token directly into local storage!
+      const role = result.role === 'admin' ? 'marketing' : result.role;
       localStorage.setItem('awe_token', result.token);
-      localStorage.setItem('awe_role', result.role || 'admin');
-      
-      // Clear forms and route cleanly to your studio dashboard
+      localStorage.setItem('awe_role', role);
+
       setEmail('');
       setPassword('');
-      navigate('/admin/gallery');
 
+      if (role === 'super_admin') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/admin/gallery');
+      }
     } catch (err: any) {
       alert(`Authentication failure: ${err.message}`);
     } finally {
@@ -45,24 +47,20 @@ export function AdminLogin() {
   };
 
   return (
-    <div 
+    <div
       className="min-h-screen flex items-center justify-center px-4 text-neutral-800 relative overflow-hidden font-sans"
-      style={{ backgroundColor: '#C4BCC7' }} // Keeps the overall page background as is
+      style={{ backgroundColor: '#C4BCC7' }}
     >
-      {/* Outer Wrapper for positioning the 3D character next to the login card */}
       <div className="relative w-full max-w-2xl flex items-center justify-center">
-
-        {/* 👑 3D Queen Character Asset */}
         <div className="hidden md:block absolute -left-28 z-20 w-80 h-auto top-1/2 -translate-y-1/2 pointer-events-none">
-          <img 
-            src={queenImage} 
-            alt="3D Queen Character" 
+          <img
+            src={queenImage}
+            alt="3D Queen Character"
             className="w-full h-auto drop-shadow-2xl object-contain"
           />
         </div>
 
-        {/* 🌸 THE CENTER LOGIN CARD: Changed background to Baby Pink (#FCE7F3) */}
-        <div 
+        <div
           className="w-full max-w-md border border-pink-200 p-8 rounded-2xl shadow-2xl transition-all relative z-10"
           style={{ backgroundColor: '#FCE7F3' }}
         >
@@ -71,20 +69,23 @@ export function AdminLogin() {
               Internal Studio Platform
             </span>
             <h2 className="font-serif text-2xl font-bold text-neutral-900">AWE Studio Engine</h2>
+            <p className="text-[11px] text-neutral-600 mt-2">
+              Marketing &amp; Super Admin access — same secure portal
+            </p>
           </div>
 
           <form onSubmit={handleLoginSubmit} className="space-y-6">
             <div>
               <label className="block text-[10px] uppercase font-bold tracking-wider mb-2 text-neutral-700">
-                Admin Email
+                Studio Email
               </label>
-              <input 
-                type="email" 
-                required 
-                value={email} 
-                onChange={(e) => setEmail(e.target.value)} 
-                className="w-full border border-pink-200 p-3 text-sm rounded-xl focus:outline-none focus:border-brand-indigo text-neutral-900 placeholder:text-neutral-400 bg-white" 
-                placeholder="email address" 
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full border border-pink-200 p-3 text-sm rounded-xl focus:outline-none focus:border-brand-indigo text-neutral-900 placeholder:text-neutral-400 bg-white"
+                placeholder="email address"
                 disabled={loading}
               />
             </div>
@@ -93,19 +94,19 @@ export function AdminLogin() {
               <label className="block text-[10px] uppercase font-bold tracking-wider mb-2 text-neutral-700">
                 Security Password
               </label>
-              <input 
-                type="password" 
-                required 
-                value={password} 
-                onChange={(e) => setPassword(e.target.value)} 
-                className="w-full border border-pink-200 p-3 text-sm rounded-xl focus:outline-none focus:border-brand-indigo text-neutral-900 placeholder:text-neutral-400 bg-white" 
-                placeholder="password" 
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full border border-pink-200 p-3 text-sm rounded-xl focus:outline-none focus:border-brand-indigo text-neutral-900 placeholder:text-neutral-400 bg-white"
+                placeholder="password"
                 disabled={loading}
               />
             </div>
 
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={loading}
               className="w-full bg-brand-luxury text-white py-4 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-brand-indigo transition-colors rounded-xl cursor-pointer mt-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
             >
@@ -113,7 +114,6 @@ export function AdminLogin() {
             </button>
           </form>
         </div>
-
       </div>
     </div>
   );

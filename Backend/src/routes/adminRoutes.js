@@ -5,7 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import multer from 'multer';
 import pool from '../db.js';
-import { verifyAdminToken } from './authMiddleware.js';
+import { verifyAdminToken, requireMarketing, requireSuperAdmin } from './authMiddleware.js';
 import { Resend } from 'resend';
 import { sendParcelOnTheWayEmail } from '../utils/mailer.js';
 
@@ -49,13 +49,19 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid security credentials.' });
     }
 
+    const rawRole = user.role === 'admin' ? 'marketing' : user.role;
     const token = jwt.sign(
-      { id: user.id, role: user.role },
+      { id: user.id, role: rawRole, email: user.email },
       process.env.JWT_SECRET || 'fallback_secret_key',
       { expiresIn: '24h' }
     );
 
-    res.json({ token, role: user.role, message: 'Authentication successful.' });
+    res.json({
+      token,
+      role: rawRole,
+      email: user.email,
+      message: 'Authentication successful.',
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error during login operation.' });
@@ -80,7 +86,7 @@ router.get('/gallery', async (req, res) => {
 });
 
 // Protected Upload Route
-router.post('/gallery', verifyAdminToken, upload.single('image'), async (req, res) => {
+router.post('/gallery', requireMarketing, upload.single('image'), async (req, res) => {
   const { title, location, date } = req.body;
   
   if (!req.file) {
@@ -116,7 +122,7 @@ router.get('/newsletters', async (req, res) => {
 });
 
 // Protected Publish Route
-router.post('/newsletters', verifyAdminToken, async (req, res) => {
+router.post('/newsletters', requireMarketing, async (req, res) => {
   const { title, content } = req.body;
   try {
     const newArticle = await pool.query(
@@ -144,7 +150,7 @@ router.get('/events', async (req, res) => {
 });
 
 // Protected Publish Route (Matches Admin Panel Event Submission form)
-router.post('/events', verifyAdminToken, async (req, res) => {
+router.post('/events', requireMarketing, async (req, res) => {
   const { title, date, location, price, event_type } = req.body;
   
   try {
@@ -165,7 +171,7 @@ router.post('/events', verifyAdminToken, async (req, res) => {
    🛒 5. ORDER MANAGEMENT & OPERATIONS
    ========================================== */
 
-router.get('/orders', verifyAdminToken, async (req, res) => {
+router.get('/orders', requireSuperAdmin, async (req, res) => {
   try {
     const ordersResult = await pool.query('SELECT * FROM orders ORDER BY created_at DESC');
     const itemsResult = await pool.query('SELECT * FROM order_items');
@@ -182,7 +188,7 @@ router.get('/orders', verifyAdminToken, async (req, res) => {
   }
 });
 
-router.patch('/orders/:id/status', verifyAdminToken, async (req, res) => {
+router.patch('/orders/:id/status', requireSuperAdmin, async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
 
@@ -248,7 +254,7 @@ router.get('/products', async (req, res) => {
   }
 });
 
-router.post('/products', verifyAdminToken, upload.single('image'), async (req, res) => {
+router.post('/products', requireMarketing, upload.single('image'), async (req, res) => {
   const {
     name,
     description = '',
@@ -284,7 +290,7 @@ router.post('/products', verifyAdminToken, upload.single('image'), async (req, r
   }
 });
 
-router.put('/products/:id', verifyAdminToken, async (req, res) => {
+router.put('/products/:id', requireMarketing, async (req, res) => {
   const { id } = req.params;
   const {
     name,
@@ -333,7 +339,7 @@ router.put('/products/:id', verifyAdminToken, async (req, res) => {
 });
 
 // Mark product out of stock (reflects on public shop) — preferred over hard delete
-router.patch('/products/:id/stock', verifyAdminToken, async (req, res) => {
+router.patch('/products/:id/stock', requireMarketing, async (req, res) => {
   const { id } = req.params;
   const { is_available } = req.body;
 
@@ -359,7 +365,7 @@ router.patch('/products/:id/stock', verifyAdminToken, async (req, res) => {
   }
 });
 
-router.delete('/products/:id', verifyAdminToken, async (req, res) => {
+router.delete('/products/:id', requireMarketing, async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -386,7 +392,7 @@ router.delete('/products/:id', verifyAdminToken, async (req, res) => {
    📊 6b. CRM / MEMBERSHIP ANALYTICS
    ========================================== */
 
-router.get('/crm', verifyAdminToken, async (req, res) => {
+router.get('/crm', requireSuperAdmin, async (req, res) => {
   try {
     const membersRes = await pool.query(
       `SELECT id, name, surname, email, subscription_status, last_payment_at, created_at, updated_at
@@ -445,7 +451,40 @@ router.get('/crm', verifyAdminToken, async (req, res) => {
   }
 });
 
-router.delete('/members/:id', verifyAdminToken, async (req, res) => {
+router.post('/members', requireSuperAdmin, async (req, res) => {
+  const { name, surname, email, subscription_status = 'active' } = req.body;
+
+  if (!name || !surname || !email) {
+    return res.status(400).json({ error: 'Name, surname, and email are required.' });
+  }
+
+  const allowed = ['pending', 'active', 'cancelled', 'failed', 'intervention'];
+  const status = allowed.includes(subscription_status) ? subscription_status : 'active';
+
+  try {
+    const existing = await pool.query(
+      `SELECT id FROM members WHERE LOWER(email) = LOWER($1)`,
+      [email.trim()]
+    );
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ error: 'A member with this email already exists.' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO members (name, surname, email, subscription_status, last_payment_at)
+       VALUES ($1, $2, $3, $4, CASE WHEN $4 = 'active' THEN CURRENT_TIMESTAMP ELSE NULL END)
+       RETURNING *`,
+      [name.trim(), surname.trim(), email.trim().toLowerCase(), status]
+    );
+
+    res.status(201).json({ message: 'Member added to CRM.', data: result.rows[0] });
+  } catch (err) {
+    console.error('Add member error:', err);
+    res.status(500).json({ error: 'Failed to add member.' });
+  }
+});
+
+router.delete('/members/:id', requireSuperAdmin, async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -455,23 +494,15 @@ router.delete('/members/:id', verifyAdminToken, async (req, res) => {
     }
 
     const member = existing.rows[0];
-    const status = (member.subscription_status || '').toLowerCase();
-
-    if (status !== 'cancelled' && status !== 'unsubscribed') {
-      return res.status(400).json({
-        error: 'Only members who have unsubscribed/cancelled can be removed from the CRM.',
-      });
-    }
-
     await pool.query('DELETE FROM members WHERE id = $1', [id]);
-    res.json({ message: 'Unsubscribed member removed from CRM.', removed: member });
+    res.json({ message: 'Member removed from CRM database.', removed: member });
   } catch (err) {
     console.error('Member removal error:', err);
     res.status(500).json({ error: 'Failed to remove member.' });
   }
 });
 
-router.patch('/members/:id/status', verifyAdminToken, async (req, res) => {
+router.patch('/members/:id/status', requireSuperAdmin, async (req, res) => {
   const { id } = req.params;
   const { subscription_status } = req.body;
 
@@ -504,7 +535,7 @@ router.patch('/members/:id/status', verifyAdminToken, async (req, res) => {
    ========================================== */
 
 // Verify QR Token & Record Attendance
-router.post('/scan-ticket', verifyAdminToken, async (req, res) => {
+router.post('/scan-ticket', requireSuperAdmin, async (req, res) => {
   const { token } = req.body;
 
   if (!token) {
@@ -580,7 +611,7 @@ router.post('/scan-ticket', verifyAdminToken, async (req, res) => {
 });
 
 // Member vs Non-Member Attendance Leaderboard for Gifting
-router.get('/attendance-metrics', verifyAdminToken, async (req, res) => {
+router.get('/attendance-metrics', requireSuperAdmin, async (req, res) => {
   try {
     const reportQuery = `
       SELECT 

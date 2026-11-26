@@ -114,7 +114,7 @@ export function Shop() {
               animate={{ opacity: 1, y: 0 }}
               className="editorial-title text-brand-text"
             >
-              The <span className="italic opacity-60">Merchant.</span>
+              The <span className="italic opacity-80">Merchant.</span>
             </motion.h1>
           </div>
 
@@ -184,7 +184,7 @@ export function Shop() {
                       {product.category}
                     </span>
                     <h3 className="text-xl font-serif mb-2 text-brand-text">{product.name}</h3>
-                    <p className="font-serif italic text-brand-text/60">R{product.price}</p>
+                    <p className="font-serif italic text-brand-text/85">R{product.price}</p>
                     {outOfStock && (
                       <p className="text-[10px] font-bold uppercase tracking-widest text-red-600 mt-2">
                         Currently unavailable

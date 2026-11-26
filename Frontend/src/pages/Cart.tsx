@@ -221,7 +221,7 @@ export function Cart() {
           // ----------------- VIEW MODE B: STANDARD CART MANIFEST -----------------
           <div>
             {cartItems.length === 0 ? (
-              <p className="font-serif italic text-brand-text/60">Your cart is currently empty.</p>
+              <p className="font-serif italic text-brand-text/85">Your cart is currently empty.</p>
             ) : (
               <div className="space-y-8">
                 {cartItems.map((item) => (

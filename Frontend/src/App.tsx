@@ -17,7 +17,7 @@ import { Contact } from './pages/Contact';
 import { CartProvider } from './context/CartContext';
 import { Cart } from './pages/Cart';
 import { Gallery } from './components/Gallery';
-import { ProtectedRoute } from './components/ProtectedRoute';
+import { ProtectedRoute, RoleRoute } from './components/ProtectedRoute';
 import { Profile } from './pages/Profile';
 import { Unsubscribe } from './pages/Unsubscribe';
 
@@ -29,6 +29,7 @@ import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { AdminShop } from './pages/admin/AdminShop'; 
 import { AdminScanner } from './pages/admin/AdminScanner';
 import { AdminTracking } from './pages/admin/AdminTracking';
+import { AdminMembers } from './pages/admin/AdminMembers';
 
 /* ==========================================
    👥 PUBLIC SITE LAYOUT WRAPPER
@@ -88,15 +89,23 @@ export default function App() {
           {/* 🔐 BACKEND SIGN-IN SPACE (No navbar, footer, or sidebar) */}
           <Route path="/admin/login" element={<AdminLogin />} />
 
-          {/* 🔒 PROTECTED CORE DASHBOARDS (No public elements, include Sidebar instead) */}
+          {/* 🔒 PROTECTED STAFF PORTAL */}
           <Route element={<ProtectedRoute />}>
             <Route element={<AdminLayout />}>
-              <Route path="/admin/dashboard" element={<AdminDashboard />} />
-              <Route path="/admin/shop" element={<AdminShop />} />
-              <Route path="/admin/tracking" element={<AdminTracking />} />
-              <Route path="/admin/gallery" element={<AdminGallery />} />
-              <Route path="/admin/community" element={<AdminCommunity />} />
-              <Route path="/admin/scanner" element={<AdminScanner />} />
+              {/* Super admin: CRM, tracking, members */}
+              <Route element={<RoleRoute allow={['super_admin']} />}>
+                <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                <Route path="/admin/tracking" element={<AdminTracking />} />
+                <Route path="/admin/members" element={<AdminMembers />} />
+                <Route path="/admin/scanner" element={<AdminScanner />} />
+              </Route>
+
+              {/* Marketing (+ super full access): gallery, shop, community */}
+              <Route element={<RoleRoute allow={['marketing', 'super_admin']} />}>
+                <Route path="/admin/shop" element={<AdminShop />} />
+                <Route path="/admin/gallery" element={<AdminGallery />} />
+                <Route path="/admin/community" element={<AdminCommunity />} />
+              </Route>
             </Route>
           </Route>
 

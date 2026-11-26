@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { AdminLayout } from '../../components/admin/AdminLayout';
 import {
   Package,
@@ -141,8 +142,8 @@ export function AdminDashboard() {
     }
   };
 
-  const handleRemoveUnsubscribed = async (memberId: number) => {
-    if (!confirm('Remove this unsubscribed member from the CRM database?')) return;
+  const handleRemoveMember = async (memberId: number) => {
+    if (!confirm('Permanently remove this member from the CRM database?')) return;
 
     try {
       const token = localStorage.getItem('awe_token');
@@ -156,11 +157,7 @@ export function AdminDashboard() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Could not remove member.');
       setMembers((prev) => prev.filter((m) => m.id !== memberId));
-      setCrmStats((prev) => ({
-        ...prev,
-        signedUp: Math.max(0, prev.signedUp - 1),
-        fallingBack: Math.max(0, prev.fallingBack - 1),
-      }));
+      await fetchCrm();
     } catch (err: any) {
       alert(err.message);
     }
@@ -175,10 +172,6 @@ export function AdminDashboard() {
   );
   const pendingOrders = orders.filter((o) => o.status === 'Processing').length;
 
-  const cancelledMembers = members.filter((m) =>
-    ['cancelled', 'unsubscribed'].includes((m.subscription_status || '').toLowerCase())
-  );
-
   return (
     <AdminLayout>
       <div className="max-w-6xl mx-auto">
@@ -188,7 +181,7 @@ export function AdminDashboard() {
               AWE Control Hub
             </h1>
             <p className="text-xs text-neutral-700 italic">
-              Membership CRM, fulfillment tracking &amp; order operations
+              Super admin CRM, fulfillment tracking &amp; order operations
             </p>
           </div>
 
@@ -266,23 +259,29 @@ export function AdminDashboard() {
             ))}
           </div>
 
-          {/* Unsubscribed members removable list */}
+          {/* Full member list — remove anyone */}
           <div
             className="p-6 border border-neutral-300 rounded shadow-sm"
             style={{ backgroundColor: '#E6E0F8' }}
           >
-            <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-800 mb-3">
-              Unsubscribed members (removable)
-            </h3>
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-800">
+                Member database ({members.length})
+              </h3>
+              <Link
+                to="/admin/members"
+                className="text-[10px] font-bold uppercase tracking-widest text-purple-950 underline"
+              >
+                Open full members manager →
+              </Link>
+            </div>
             {crmLoading ? (
               <p className="text-xs italic text-neutral-700">Loading members…</p>
-            ) : cancelledMembers.length === 0 ? (
-              <p className="text-xs italic text-neutral-700">
-                No cancelled/unsubscribed members awaiting removal.
-              </p>
+            ) : members.length === 0 ? (
+              <p className="text-xs italic text-neutral-700">No members in the database.</p>
             ) : (
-              <div className="space-y-2">
-                {cancelledMembers.map((m) => (
+              <div className="space-y-2 max-h-80 overflow-y-auto">
+                {members.map((m) => (
                   <div
                     key={m.id}
                     className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border border-neutral-400/60 rounded p-3 bg-purple-100/20"
@@ -297,10 +296,10 @@ export function AdminDashboard() {
                       </p>
                     </div>
                     <button
-                      onClick={() => handleRemoveUnsubscribed(m.id)}
+                      onClick={() => handleRemoveMember(m.id)}
                       className="flex items-center gap-1 px-3 py-2 text-[10px] font-bold uppercase tracking-widest bg-red-800 text-white hover:bg-red-700 rounded cursor-pointer"
                     >
-                      <Trash2 size={12} /> Remove from CRM
+                      <Trash2 size={12} /> Remove
                     </button>
                   </div>
                 ))}

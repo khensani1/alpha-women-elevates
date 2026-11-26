@@ -8,16 +8,16 @@ export default {
     extend: {
       colors: {
         'brand-bg': '#FFFFFF',
-        'brand-bg-accent': '#3B1E54',
-        'brand-text': '#CC2B5E',
-        'brand-luxury': '#1A1A1A',
-        'brand-border': '#EAEAEA',
-        'brand-indigo': '#4B0082',
-        'brand-muted': '#888888',
-        'brand-sunset': '#FF4500',
+        'brand-bg-accent': '#2A1538',
+        'brand-text': '#1A1024',
+        'brand-luxury': '#1A0F24',
+        'brand-border': '#C9B8D6',
+        'brand-indigo': '#2A0A4A',
+        'brand-muted': '#3D2A4F',
+        'brand-sunset': '#8B153F',
       },
       backgroundImage: {
-        'sunset-gradient': 'linear-gradient(to right, #CC2B5E, #3B1E54)',
+        'sunset-gradient': 'linear-gradient(to right, #8B153F, #2A0A4A)',
       }
     },
   },

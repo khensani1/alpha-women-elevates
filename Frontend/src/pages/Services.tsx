@@ -78,10 +78,10 @@ export function Services() {
               className="editorial-title text-brand-text"
             >
               Empowerment<br />
-              <span className="italic opacity-60">Architectures.</span>
+              <span className="italic opacity-80">Architectures.</span>
             </motion.h1>
           </div>
-          <p className="text-lg text-brand-text/70 font-serif italic max-w-xs">
+          <p className="text-lg text-brand-text/90 font-serif italic max-w-xs">
             We provide a comprehensive range of services designed to support your 
             journey at every stage.
           </p>
@@ -98,7 +98,7 @@ export function Services() {
             >
               <div className="text-brand-indigo mb-8">{service.icon}</div>
               <h2 className="text-3xl font-serif mb-6 text-brand-text">{service.title}</h2>
-              <p className="text-brand-text/60 mb-10 leading-relaxed font-light">
+              <p className="text-brand-text/85 mb-10 leading-relaxed font-light">
                 {service.desc}
               </p>
               <ul className="space-y-4 mb-12">

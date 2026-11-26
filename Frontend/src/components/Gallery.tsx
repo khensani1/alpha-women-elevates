@@ -82,7 +82,7 @@ export function Gallery() {
               animate={{ opacity: 1, y: 0 }}
               className="editorial-title text-brand-text"
             >
-              The <span className="italic opacity-60">Archive.</span>
+              The <span className="italic opacity-80">Archive.</span>
             </motion.h1>
           </div>
           
