@@ -1,6 +1,7 @@
 import express from 'express';
+import crypto from 'crypto';
 import pool from '../db.js';
-import { createPayPalOrder, capturePayPalOrder } from '../utils/paypal.js';
+import { initializePaystackTransaction, verifyPaystackTransaction } from '../utils/paystack.js';
 import {
   sendOrderNotificationToAdmin,
   sendOrderReceiptToCustomer,
@@ -12,11 +13,15 @@ const router = express.Router();
 const frontendUrl = () => process.env.FRONTEND_URL || 'http://localhost:5173';
 const backendUrl = () => process.env.BACKEND_URL || 'http://localhost:5000';
 
+function makeReference(prefix, pendingId) {
+  return `${prefix}_${pendingId}_${Date.now()}`;
+}
+
 /**
- * POST /api/payments/paypal-checkout
- * Creates a PayPal order for shop cart checkout and returns the approval URL.
+ * POST /api/payments/paystack-checkout
+ * Initializes Paystack payment for shop cart checkout.
  */
-router.post('/paypal-checkout', async (req, res) => {
+router.post('/paystack-checkout', async (req, res) => {
   const { amount, item_name, email, cartItems } = req.body;
 
   if (!email || !amount) {
@@ -37,87 +42,155 @@ router.post('/paypal-checkout', async (req, res) => {
     );
 
     const pendingId = pending.rows[0].id;
+    const reference = makeReference('shop', pendingId);
 
-    const { orderId, approveUrl } = await createPayPalOrder({
+    const { authorizationUrl } = await initializePaystackTransaction({
+      email: email.trim(),
       amount,
-      currency: process.env.PAYPAL_CURRENCY || 'ZAR',
-      description: item_name || 'Alpha Women Elevates Order',
-      customId: `shop:${pendingId}`,
-      payerEmail: email.trim(),
-      returnUrl: `${backendUrl()}/api/payments/paypal-return?pending_id=${pendingId}`,
-      cancelUrl: `${frontendUrl()}/cart?payment=cancelled`,
+      reference,
+      callbackUrl: `${backendUrl()}/api/payments/paystack-callback?pending_id=${pendingId}`,
+      metadata: {
+        pending_id: pendingId,
+        checkout_type: 'shop',
+        custom_fields: [
+          {
+            display_name: 'Order Type',
+            variable_name: 'order_type',
+            value: 'Shop Order',
+          },
+        ],
+      },
     });
 
     await pool.query(
-      `UPDATE pending_checkouts SET paypal_order_id = $1 WHERE id = $2`,
-      [orderId, pendingId]
+      `UPDATE pending_checkouts
+       SET paypal_order_id = $1, payment_reference = $1
+       WHERE id = $2`,
+      [reference, pendingId]
     );
 
-    if (!approveUrl) {
-      return res.status(500).json({ error: 'PayPal did not return an approval link.' });
-    }
-
-    res.status(200).json({ url: approveUrl, orderId });
+    res.status(200).json({ url: authorizationUrl, reference });
   } catch (err) {
-    console.error('PayPal checkout init error:', err);
-    res.status(500).json({ error: err.message || 'Failed to start PayPal checkout.' });
+    console.error('Paystack checkout init error:', err);
+    res.status(500).json({ error: err.message || 'Failed to start Paystack checkout.' });
   }
 });
 
 /**
- * GET /api/payments/paypal-return
- * Captures payment after buyer approves on PayPal, then redirects to frontend.
+ * GET /api/payments/paystack-callback
+ * Verifies payment after Paystack redirects the buyer back.
  */
-router.get('/paypal-return', async (req, res) => {
-  const token = req.query.token; // PayPal order ID
+router.get('/paystack-callback', async (req, res) => {
+  const reference = req.query.reference || req.query.trxref;
   const pendingId = req.query.pending_id;
 
   try {
-    if (!token) {
+    if (!reference) {
       return res.redirect(`${frontendUrl()}/cart?payment=cancelled`);
     }
 
-    const capture = await capturePayPalOrder(token);
-    const status = capture.status;
+    const verified = await verifyPaystackTransaction(reference);
 
-    if (status !== 'COMPLETED') {
-      console.warn('PayPal capture not completed:', status);
+    if (verified.status !== 'success') {
+      console.warn('Paystack payment not successful:', verified.status);
       return res.redirect(`${frontendUrl()}/cart?payment=cancelled`);
     }
 
     const pendingRes = await pool.query(
       `SELECT * FROM pending_checkouts
-       WHERE paypal_order_id = $1 OR id = $2
+       WHERE payment_reference = $1
+          OR paypal_order_id = $1
+          OR id = $2
        LIMIT 1`,
-      [token, pendingId || 0]
+      [reference, pendingId || 0]
     );
 
     if (pendingRes.rows.length === 0) {
-      console.error('No pending checkout found for PayPal order', token);
+      console.error('No pending checkout found for Paystack reference', reference);
       return res.redirect(`${frontendUrl()}/cart?payment=success`);
     }
 
-    const pending = pendingRes.rows[0];
+    const pendingRow = pendingRes.rows[0];
+    const claimed = await pool.query(
+      `DELETE FROM pending_checkouts WHERE id = $1 RETURNING *`,
+      [pendingRow.id]
+    );
 
-    if (pending.checkout_type === 'membership') {
-      await finalizeMembershipPayment(pending, token);
-      await pool.query(`DELETE FROM pending_checkouts WHERE id = $1`, [pending.id]);
-      return res.redirect(
-        `${frontendUrl()}/community?payment=success`
-      );
+    if (claimed.rows.length === 0) {
+      const dest =
+        pendingRow.checkout_type === 'membership'
+          ? `${frontendUrl()}/community?payment=success`
+          : `${frontendUrl()}/cart?payment=success`;
+      return res.redirect(dest);
     }
 
-    // Shop order
-    await finalizeShopOrder(pending, token);
-    await pool.query(`DELETE FROM pending_checkouts WHERE id = $1`, [pending.id]);
+    const pending = claimed.rows[0];
+
+    if (pending.checkout_type === 'membership') {
+      await finalizeMembershipPayment(pending, reference);
+      return res.redirect(`${frontendUrl()}/community?payment=success`);
+    }
+
+    await finalizeShopOrder(pending, reference);
     return res.redirect(`${frontendUrl()}/cart?payment=success`);
   } catch (err) {
-    console.error('PayPal return/capture error:', err);
+    console.error('Paystack callback/verify error:', err);
     return res.redirect(`${frontendUrl()}/cart?payment=cancelled`);
   }
 });
 
-async function finalizeShopOrder(pending, paypalOrderId) {
+/**
+ * POST /api/payments/paystack-webhook
+ * Optional webhook for charge.success (set URL in Paystack dashboard).
+ */
+router.post('/paystack-webhook', async (req, res) => {
+  try {
+    const secret = process.env.PAYSTACK_SECRET_KEY;
+    const signature = req.headers['x-paystack-signature'];
+
+    if (secret && signature) {
+      const hash = crypto.createHmac('sha512', secret).update(JSON.stringify(req.body)).digest('hex');
+      if (hash !== signature) {
+        return res.status(401).send('Invalid signature');
+      }
+    }
+
+    const event = req.body;
+    if (event?.event === 'charge.success') {
+      const reference = event.data?.reference;
+      if (reference) {
+        const pendingRes = await pool.query(
+          `SELECT * FROM pending_checkouts
+           WHERE payment_reference = $1 OR paypal_order_id = $1
+           LIMIT 1`,
+          [reference]
+        );
+
+        if (pendingRes.rows.length > 0) {
+          const claimed = await pool.query(
+            `DELETE FROM pending_checkouts WHERE id = $1 RETURNING *`,
+            [pendingRes.rows[0].id]
+          );
+          if (claimed.rows.length > 0) {
+            const pending = claimed.rows[0];
+            if (pending.checkout_type === 'membership') {
+              await finalizeMembershipPayment(pending, reference);
+            } else {
+              await finalizeShopOrder(pending, reference);
+            }
+          }
+        }
+      }
+    }
+
+    res.sendStatus(200);
+  } catch (err) {
+    console.error('Paystack webhook error:', err);
+    res.sendStatus(500);
+  }
+});
+
+async function finalizeShopOrder(pending, paymentReference) {
   const customerEmail = pending.customer_email;
   const totalAmount = pending.amount;
   let cartItems = pending.cart_items;
@@ -176,7 +249,7 @@ async function finalizeShopOrder(pending, paypalOrderId) {
       console.error('Order email dispatch failed:', emailErr);
     }
 
-    console.log(`🎉 Shop order #${newOrder.id} paid via PayPal (${paypalOrderId})`);
+    console.log(`🎉 Shop order #${newOrder.id} paid via Paystack (${paymentReference})`);
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
@@ -185,7 +258,7 @@ async function finalizeShopOrder(pending, paypalOrderId) {
   }
 }
 
-async function finalizeMembershipPayment(pending, paypalOrderId) {
+async function finalizeMembershipPayment(pending, paymentReference) {
   const email = pending.customer_email;
   const amount = pending.amount || 100;
 
@@ -196,13 +269,13 @@ async function finalizeMembershipPayment(pending, paypalOrderId) {
          last_payment_at = CURRENT_TIMESTAMP,
          updated_at = CURRENT_TIMESTAMP
      WHERE LOWER(email) = LOWER($2)`,
-    [paypalOrderId, email]
+    [paymentReference, email]
   );
 
   await pool.query(
     `INSERT INTO membership_payments (member_email, amount, payment_status, payfast_payment_id)
      VALUES ($1, $2, 'COMPLETE', $3)`,
-    [email, amount, paypalOrderId]
+    [email, amount, paymentReference]
   );
 
   try {
@@ -210,13 +283,13 @@ async function finalizeMembershipPayment(pending, paypalOrderId) {
       to: email,
       amount,
       paymentType: 'Monthly Membership',
-      reference: paypalOrderId,
+      reference: paymentReference,
     });
   } catch (emailErr) {
     console.error('Membership payment email failed:', emailErr);
   }
 
-  console.log(`✅ Member ${email} activated via PayPal (${paypalOrderId})`);
+  console.log(`✅ Member ${email} activated via Paystack (${paymentReference})`);
 }
 
 export default router;

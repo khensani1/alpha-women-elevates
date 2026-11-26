@@ -39,7 +39,7 @@ export function Cart() {
     }
   }, [searchParams, clearCart]);
 
-  // Handle PayPal redirection checkout flow
+  // Handle Paystack redirection checkout flow
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
     if (cartItems.length === 0) return;
@@ -52,7 +52,7 @@ export function Cart() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/payments/paypal-checkout`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/payments/paystack-checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

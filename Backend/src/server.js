@@ -6,7 +6,7 @@ import paymentRoutes from './routes/paymentRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import trackingRoutes from './routes/tracking.js';
 import eventsRouter from './routes/events.js';
-import { createPayPalOrder } from './utils/paypal.js';
+import { initializePaystackTransaction } from './utils/paystack.js';
 import { sendUnsubscribeRequestToAdmin } from './utils/mailer.js';
 
 dotenv.config();
@@ -37,7 +37,7 @@ app.get('/api/community-link', (req, res) => {
 });
 
 /* ==========================================
-   💳 PAYPAL MEMBERSHIP SUBSCRIPTION CHECKOUT
+   💳 PAYSTACK MEMBERSHIP CHECKOUT
    ========================================== */
 app.post('/api/initialize-subscription', async (req, res) => {
   const { name, surname, email } = req.body;
@@ -46,8 +46,8 @@ app.post('/api/initialize-subscription', async (req, res) => {
     return res.status(400).json({ error: 'Profile details are required to initialize subscription.' });
   }
 
-  if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET) {
-    console.error('Missing PayPal credentials (PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET).');
+  if (!process.env.PAYSTACK_SECRET_KEY) {
+    console.error('Missing Paystack credentials (PAYSTACK_SECRET_KEY).');
     return res.status(500).json({ error: 'Server payment configuration is incomplete.' });
   }
 
@@ -79,27 +79,29 @@ app.post('/api/initialize-subscription', async (req, res) => {
     );
 
     const pendingId = pending.rows[0].id;
+    const reference = `membership_${pendingId}_${Date.now()}`;
 
-    const { orderId, approveUrl } = await createPayPalOrder({
+    const { authorizationUrl } = await initializePaystackTransaction({
+      email: email.trim(),
       amount,
-      currency: process.env.PAYPAL_CURRENCY || 'ZAR',
-      description: 'Alpha Women Elevates Monthly Membership',
-      customId: `membership:${pendingId}`,
-      payerEmail: email.trim(),
-      returnUrl: `${backendUrl()}/api/payments/paypal-return?pending_id=${pendingId}`,
-      cancelUrl: `${frontendUrl()}/community?payment=cancelled`,
+      reference,
+      callbackUrl: `${backendUrl()}/api/payments/paystack-callback?pending_id=${pendingId}`,
+      metadata: {
+        pending_id: pendingId,
+        checkout_type: 'membership',
+        name,
+        surname,
+      },
     });
 
     await pool.query(
-      `UPDATE pending_checkouts SET paypal_order_id = $1 WHERE id = $2`,
-      [orderId, pendingId]
+      `UPDATE pending_checkouts
+       SET paypal_order_id = $1, payment_reference = $1
+       WHERE id = $2`,
+      [reference, pendingId]
     );
 
-    if (!approveUrl) {
-      return res.status(500).json({ error: 'PayPal did not return an approval link.' });
-    }
-
-    res.json({ redirectUrl: approveUrl, orderId });
+    res.json({ redirectUrl: authorizationUrl, reference });
   } catch (error) {
     console.error('Subscription initiation breakdown:', error.message);
     res.status(500).json({ error: error.message || 'Failed to initialize secure checkout engine.' });

@@ -81,7 +81,7 @@ export function Community() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Failed to process event booking.');
 
-      // If event requires payment and backend generated a PayPal payment link
+      // If event requires payment and backend generated a Paystack payment link
       if (selectedEvent.price && selectedEvent.price > 0 && result.paymentUrl) {
         window.location.href = result.paymentUrl;
         return;
